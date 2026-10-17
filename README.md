@@ -38,11 +38,14 @@ Voraussetzung auf dem Server: `git`, Docker mit Compose-Plugin und
 Lesezugriff auf das private Repository (z. B. per SSH-Deploy-Key oder
 Personal Access Token).
 
-Einmalig klonen und starten:
+Einmalig klonen, `docker-compose.yml` anlegen (siehe
+[Mit Docker Compose bereitstellen](#mit-docker-compose-bereitstellen))
+und starten:
 
 ```sh
 git clone git@github.com:demheld/decimal-odometer.git
 cd decimal-odometer
+# docker-compose.yml anlegen
 chmod +x deploy.sh   # nur falls das Ausführungsrecht fehlt
 ./deploy.sh
 ```
@@ -58,11 +61,28 @@ Für jede spätere Aktualisierung im Projektverzeichnis erneut
    (ersetzt ihn nur, wenn sich das Image oder die Konfiguration geändert hat),
 4. zeigt den Status mit `docker compose ps`.
 
-Die Portbindung lässt sich auch hier über `ODOMETER_PORT` setzen, z. B.
+Die Portbindung lässt sich mit der Beispiel-`docker-compose.yml` auch hier
+über `ODOMETER_PORT` setzen, z. B.
 `ODOMETER_PORT=127.0.0.1:8080 ./deploy.sh` hinter einem Reverse Proxy
 (siehe unten).
 
 ## Mit Docker Compose bereitstellen
+
+`docker-compose.yml` ist absichtlich nicht im Repository (siehe
+[.gitignore](./.gitignore)), damit jeder Server eine eigene Konfiguration
+behalten kann, die `git pull` und `deploy.sh` nicht überschreiben.
+Die Datei im Projektverzeichnis anlegen, zum Beispiel:
+
+```yaml
+services:
+  decimal-odometer:
+    build: .
+    image: decimal-odometer:local
+    container_name: decimal-odometer
+    restart: unless-stopped
+    ports:
+      - "${ODOMETER_PORT:-8080}:8080"
+```
 
 Voraussetzung: Docker mit Compose-Plugin (`docker compose`) und
 Unterstützung für Linux-Container. Im Projektverzeichnis ausführen:
@@ -71,8 +91,8 @@ Unterstützung für Linux-Container. Im Projektverzeichnis ausführen:
 docker compose up -d --build
 ```
 
-Compose baut das Image `decimal-odometer:local` aus dem [Dockerfile](./Dockerfile)
-(mit aktuellem Basisimage), startet den Container `decimal-odometer` mit
+Mit diesem Beispiel baut Compose das Image `decimal-odometer:local` aus dem
+[Dockerfile](./Dockerfile), startet den Container `decimal-odometer` mit
 `restart: unless-stopped` und veröffentlicht ihn auf Host-Port 8080.
 Die Seite ist dann unter `http://localhost:8080/` erreichbar.
 

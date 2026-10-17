@@ -22,7 +22,7 @@
         }
         h1 {
             color: #333;
-            margin-bottom: 5px;
+            margin-bottom: 24px;
             text-align: center;
         }
         p {
@@ -167,9 +167,8 @@
         .counter-row {
             --wheel-width: clamp(40px, 13vw, 64px);
             --odometer-pad: 18px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
+            --side-gap: 12px;
+            position: relative;
             max-width: 100%;
         }
         .counter-wheels {
@@ -177,11 +176,14 @@
             flex-direction: column;
             align-items: center;
         }
+        /* Placed beside the centered odometer without shifting it. */
         .side-buttons {
+            position: absolute;
+            top: calc(var(--odometer-pad) + 6px);
+            left: calc(100% + var(--side-gap));
             display: flex;
             flex-direction: column;
             gap: 8px;
-            margin-bottom: 26px;
         }
         .play-button {
             flex: none;
@@ -381,7 +383,7 @@
         @media (max-width: 400px) {
             .counter-row {
                 --odometer-pad: 10px;
-                gap: 8px;
+                --side-gap: 8px;
             }
         }
         @media (prefers-reduced-motion: reduce) {
@@ -393,7 +395,6 @@
 <body>
 
     <h1>Dezimalsystem-Zählwerk</h1>
-    <p>Addiere oder subtrahiere Einer, Zehner, Hunderter oder Tausender und beobachte die Zahlenräder.</p>
 
     <main class="learning-layout">
     <section class="counter-panel" aria-label="Zählwerk und Rechentasten">
@@ -414,13 +415,13 @@
     <button type="button" class="play-button" id="playBtn" aria-pressed="false"
         aria-label="Automatisches Zählen starten: plus 1 pro Sekunde"
         title="Start: plus 1 pro Sekunde"><span aria-hidden="true">&#9654;</span></button>
-    <button type="button" class="play-button gear-button" id="gearBtn" aria-pressed="true"
-        aria-controls="gearView" aria-label="Getriebe ausblenden"
-        title="Getriebe ausblenden"><span aria-hidden="true">&#9881;&#xFE0E;</span></button>
+    <button type="button" class="play-button gear-button"     id="gearBtn" aria-pressed="false"
+            aria-controls="gearView" aria-label="Getriebe einblenden"
+            title="Getriebe einblenden"><span aria-hidden="true">&#9881;&#xFE0E;</span></button>
     </div>
     </div>
 
-    <figure class="gear-view" id="gearView" aria-label="Blick ins Getriebe: Beim Schritt von 9 auf 0 schiebt der rosa Mitnehmer das Zwischenrad an und dreht das nächste Rad um eine Ziffer weiter.">
+    <figure class="gear-view" id="gearView" hidden aria-label="Blick ins Getriebe: Beim Schritt von 9 auf 0 schiebt der rosa Mitnehmer das Zwischenrad an und dreht das nächste Rad um eine Ziffer weiter.">
         <svg id="gearSvg" viewBox="0 0 600 182" aria-hidden="true">
             <defs>
                 <radialGradient id="discMetal" cx="38%" cy="32%" r="75%">
@@ -432,6 +433,12 @@
                     <stop offset="0" stop-color="#ffffff"/>
                     <stop offset="1" stop-color="#7d8794"/>
                 </radialGradient>
+                <linearGradient id="windowGlass" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#ffffff" stop-opacity=".55"/>
+                    <stop offset=".45" stop-color="#ffffff" stop-opacity=".08"/>
+                    <stop offset=".55" stop-color="#000000" stop-opacity=".04"/>
+                    <stop offset="1" stop-color="#000000" stop-opacity=".18"/>
+                </linearGradient>
                 <radialGradient id="carryGlow">
                     <stop offset="0" stop-color="#ff5fd2" stop-opacity=".9"/>
                     <stop offset="1" stop-color="#ff5fd2" stop-opacity="0"/>
@@ -616,6 +623,15 @@
             gearCenters.forEach(({ x, y }) => {
                 svgElement('circle', { cx: x + 5, cy: y + 7, r: 61, fill: '#8f8a7c', opacity: '.45' }, gearSvg);
             });
+            // Carry teeth sit one layer behind the wheels so the digits stay fully visible.
+            gearCenters.forEach((_, index) => {
+                const tooth = svgElement('g', { class: 'turning' }, gearSvg);
+                svgElement('path', {
+                    d: 'M-7 -48 L-4 -76 L4 -76 L7 -48 Z', fill: '#ff5fd2', stroke: '#b0128a',
+                    'stroke-width': 1.5, 'stroke-linejoin': 'round', transform: `rotate(${carryToothAngle})`
+                }, tooth);
+                gearParts[index].turning.push(tooth);
+            });
             gearCenters.forEach(({ x, y }, index) => {
                 const disc = svgElement('g', { class: 'turning' }, gearSvg);
                 for (let digit = 0; digit < 10; digit++) {
@@ -656,15 +672,12 @@
                 gearParts[index].pinion = pinion;
                 gearParts[index].badge = svgElement('text', { class: 'carry-badge', x: cx, y: cy - 30 }, gearSvg);
             });
-            // Carry teeth are drawn last so they stay visible on top of the intermediate gears.
-            gearCenters.forEach(({ x, y }, index) => {
-                const tooth = svgElement('g', { class: 'turning' }, gearSvg);
-                svgElement('path', {
-                    d: 'M-7 -48 L-4 -76 L4 -76 L7 -48 Z', fill: '#ff5fd2', stroke: '#b0128a',
-                    'stroke-width': 1.5, 'stroke-linejoin': 'round', transform: `rotate(${carryToothAngle})`
-                }, tooth);
-                gearParts[index].turning.push(tooth);
-                svgElement('path', { d: `M${x - 7} ${y - 80} L${x + 7} ${y - 80} L${x} ${y - 68} Z`, fill: '#0069ff' }, gearSvg);
+            // A fixed reading window over each wheel frames the digit that is shown.
+            gearCenters.forEach(({ x, y }) => {
+                svgElement('rect', {
+                    x: x - 13, y: y - 55, width: 26, height: 28, rx: 5,
+                    fill: 'url(#windowGlass)', stroke: '#2b2b2b', 'stroke-width': 3
+                }, gearSvg);
             });
         }
 

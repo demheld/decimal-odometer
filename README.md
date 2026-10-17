@@ -29,11 +29,13 @@ und 1000.
 
 ### Blick ins Getriebe
 
-Unter dem Zählwerk zeigt eine Seitenansicht die Mechanik dahinter. Die
-runde Taste ⚙ neben ▶ blendet sie aus und wieder ein. Die Zahnräder drehen
-sich synchron mit den Zahlenrädern:
+Unter dem Zählwerk kann eine Seitenansicht der Mechanik eingeblendet werden.
+Sie ist beim Laden ausgeblendet; die runde Taste ⚙ unter ▶ blendet sie ein
+und wieder aus. Die Zahnräder drehen sich synchron mit den Zahlenrädern.
+Ein festes Sichtfenster oben auf jedem Rad rahmt die angezeigte Ziffer ein:
 
-- Jedes Zahlenrad hat einen Zahnkranz und genau einen rosa Mitnehmer.
+- Jedes Zahlenrad hat einen Zahnkranz und genau einen rosa Mitnehmer, der
+  hinter dem Rad liegt und nur am Rand herausragt.
 - Zwischen zwei Rädern sitzt ein kleines Zwischenrad. Es greift immer in
   den Zahnkranz des linken (höheren) Rades.
 - Der Mitnehmer des rechten Rades erreicht das Zwischenrad nur beim

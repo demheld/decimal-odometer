@@ -7,12 +7,15 @@ sowie eine einblendbare Zahlen-Entdeckerleiste.
 ## Bedienung
 
 - Das Zählwerk zeigt Zahlen von 0 bis 9999. Ein Klick darauf addiert 1.
-- Neben dem Zählwerk startet „Start“ das automatische Zählen: Nach einer
-  Sekunde und anschließend jede Sekunde wird 1 addiert. „Pause“ hält es an.
+- Die kleine runde Taste ▶ neben dem Zählwerk startet das automatische
+  Zählen: Nach einer Sekunde und anschließend jede Sekunde wird 1 addiert.
+  Während des Zählens zeigt sie ❚❚ und hält es bei erneutem Tippen an.
   „Zurücksetzen“ stoppt das automatische Zählen und setzt den Wert auf 0.
   Rechentasten und blauer Punkt bleiben während des Zählens bedienbar.
   In Hintergrund-Tabs kann der Browser die Zeitabstände verlängern.
 - Die Rechentasten addieren oder subtrahieren den jeweiligen Stellenwert.
+  Die Taste +1 spielt dabei einen kurzen, knackigen Klick-Ton (nicht beim
+  automatischen Zählen und nicht beim Tippen aufs Zählwerk).
 - Würde das Ergebnis negativ, bleibt das Zählwerk bei 0 und spielt einen
   lustigen Ton. Bei Addition über 9999 beginnt es wieder bei 0.
 - Die Entdeckerleiste hat eine gleichmäßige und eine logarithmische Skala.
@@ -143,7 +146,7 @@ docker logs decimal-odometer
 ```
 
 Zusätzlich im Browser Rechentasten, Punktverschiebung, Skalenwechsel und
-Aus-/Einblenden prüfen. Der Ton benötigt eine Benutzerinteraktion und
+Aus-/Einblenden prüfen. Die Töne benötigen eine Benutzerinteraktion und
 funktionierende Audioausgabe im Browser.
 
 ### Hinter einem bestehenden Webserver

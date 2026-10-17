@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dezimalsystem-Zählwerk</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 24px 16px;
+            box-sizing: border-box;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        p {
+            color: #666;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .odometer-container {
+            display: flex;
+            background: linear-gradient(#505050, #202020 12%, #111 85%, #404040);
+            padding: 18px;
+            border: 2px solid #666;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3), inset 0 2px 3px #999;
+            cursor: pointer;
+            user-select: none;
+        }
+        .digit-column {
+            position: relative;
+            width: clamp(42px, 12vw, 64px);
+            height: 96px;
+            overflow: hidden;
+            background: #eeeae0;
+            border-radius: 3px;
+            margin: 0 2px;
+            border: 1px solid #000;
+        }
+        .digit-column::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: linear-gradient(
+                to bottom, rgba(0,0,0,.8), transparent 32%,
+                rgba(255,255,255,.3) 49%, rgba(0,0,0,.25) 50%,
+                transparent 52%, rgba(0,0,0,.8)
+            );
+            box-shadow: inset 2px 0 4px rgba(0,0,0,.4);
+        }
+        .digit-strip {
+            position: absolute;
+            top: 16px;
+            left: 0;
+            width: 100%;
+        }
+        .digit {
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 58px;
+            font-weight: bold;
+            color: #171717;
+            font-family: "Courier New", monospace;
+            font-variant-numeric: tabular-nums;
+        }
+        .controls {
+            margin-top: 25px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .controls button {
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #0069ff;
+            color: white;
+            transition: background 0.2s;
+        }
+        .controls button:hover {
+            background-color: #0051cc;
+        }
+        .controls .subtract {
+            background-color: #ffc3ff;
+            color: #0069ff;
+        }
+        .controls .subtract:hover {
+            background-color: #ffc3ff;
+            box-shadow: inset 0 0 0 2px #0069ff;
+        }
+        button:focus-visible {
+            outline: 3px solid #0069ff;
+            outline-offset: 4px;
+        }
+        .place-labels {
+            display: flex;
+            padding: 0 20px;
+            gap: 6px;
+            margin: 10px 0 0;
+            list-style: none;
+            color: #555;
+            font-size: 12px;
+            text-align: center;
+        }
+        .place-labels li {
+            width: clamp(42px, 12vw, 64px);
+        }
+        .explanation {
+            margin-top: 20px;
+            max-width: 500px;
+            text-align: center;
+            font-size: 14px;
+            color: #444;
+            background: #fff;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .learning-layout {
+            display: grid;
+            grid-template-columns: minmax(300px, 520px) minmax(320px, 420px);
+            gap: 48px;
+            align-items: center;
+            width: 100%;
+            max-width: 1000px;
+        }
+        .counter-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 0;
+        }
+        .learning-layout.scale-hidden {
+            grid-template-columns: minmax(0, 520px);
+            justify-content: center;
+        }
+        .number-panel {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 18px rgba(0,0,0,.08);
+            min-width: 0;
+        }
+        .number-panel h2 {
+            margin: 0 0 16px;
+            color: #0069ff;
+        }
+        .number-panel label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .number-panel select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #0069ff;
+            border-radius: 6px;
+            background: #fff;
+            color: #333;
+            font: inherit;
+        }
+        .number-panel p {
+            font-size: 13px;
+            text-align: left;
+            line-height: 1.5;
+        }
+        .scale-reading {
+            display: block;
+            margin: 16px 0;
+            color: #0069ff;
+            font-weight: bold;
+        }
+        .number-scale {
+            position: relative;
+            height: 560px;
+            margin: 32px 0;
+        }
+        .scale-rail {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 19px;
+            width: 10px;
+            background: #ffc3ff;
+            border-radius: 5px;
+            cursor: pointer;
+            touch-action: none;
+        }
+        .scale-rail::before {
+            content: "";
+            position: absolute;
+            inset: 0 -19px;
+        }
+        .scale-bound {
+            position: absolute;
+            left: 0;
+            font-size: 12px;
+            font-weight: bold;
+            color: #555;
+        }
+        .scale-bound.maximum { top: -22px; }
+        .scale-bound.minimum { bottom: -22px; }
+        .scale-marker {
+            position: absolute;
+            left: 24px;
+            width: 22px;
+            height: 22px;
+            border: 3px solid white;
+            border-radius: 50%;
+            background: #0069ff;
+            box-shadow: 0 0 0 2px #0069ff;
+            transform: translate(-50%, -50%);
+            transition: top .42s ease-in-out;
+            cursor: grab;
+            touch-action: none;
+        }
+        .scale-marker:focus-visible {
+            outline: 3px solid #0069ff;
+            outline-offset: 5px;
+        }
+        .number-scale.dragging .scale-marker {
+            transition: none;
+            cursor: grabbing;
+        }
+        .scale-connections {
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 90px;
+            height: 100%;
+            overflow: visible;
+            stroke: #0069ff;
+            stroke-width: 1;
+            fill: none;
+            pointer-events: none;
+        }
+        .scale-facts {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        .scale-fact {
+            position: absolute;
+            left: 94px;
+            right: 0;
+            transform: translateY(-50%);
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        .scale-fact strong {
+            display: block;
+            color: #0069ff;
+            font-size: 16px;
+        }
+        .number-panel details {
+            color: #555;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .number-panel a { color: #0069ff; }
+        @media (max-width: 780px) {
+            .learning-layout {
+                grid-template-columns: minmax(0, 1fr);
+                max-width: 520px;
+                gap: 32px;
+            }
+            .number-panel { padding: 20px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .scale-marker { transition: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Dezimalsystem-Zählwerk</h1>
+    <p>Addiere oder subtrahiere Einer, Zehner, Hunderter oder Tausender und beobachte die Zahlenräder.</p>
+
+    <main class="learning-layout">
+    <section class="counter-panel" aria-label="Zählwerk und Rechentasten">
+    <button type="button" class="odometer-container" id="odometer" title="Klicken, um 1 zu addieren" aria-label="Aktueller Zählerstand: 0. Klicken, um 1 zu addieren.">
+        <span hidden>Hochzählen</span>
+        <span class="digit-column" aria-hidden="true"><span class="digit-strip" id="thousands"></span></span>
+        <span class="digit-column" aria-hidden="true"><span class="digit-strip" id="hundreds"></span></span>
+        <span class="digit-column" aria-hidden="true"><span class="digit-strip" id="tens"></span></span>
+        <span class="digit-column" aria-hidden="true"><span class="digit-strip" id="units"></span></span>
+    </button>
+    <ul class="place-labels" aria-label="Stellenwerte von links nach rechts">
+        <li>Tausender</li><li>Hunderter</li><li>Zehner</li><li>Einer</li>
+    </ul>
+
+    <div class="controls" role="group" aria-label="Addieren">
+        <button id="incrementBtn" data-change="1">+1</button>
+        <button data-change="10">+10</button>
+        <button data-change="100">+100</button>
+        <button data-change="1000">+1000</button>
+    </div>
+    <div class="controls" role="group" aria-label="Subtrahieren">
+        <button class="subtract" data-change="-1">-1</button>
+        <button class="subtract" data-change="-10">-10</button>
+        <button class="subtract" data-change="-100">-100</button>
+        <button class="subtract" data-change="-1000">-1000</button>
+    </div>
+    <div class="controls">
+        <button id="resetBtn">Zurücksetzen</button>
+        <button id="toggleScaleBtn" aria-controls="numberPanel" aria-expanded="true">Entdeckerleiste ausblenden</button>
+    </div>
+
+    <div class="explanation" id="explanationText" role="status" aria-live="polite" aria-atomic="true">
+        Bereit zum Zählen! Jede Spalte steht für einen Stellenwert: Einer, Zehner, Hunderter oder Tausender.
+    </div>
+    </section>
+
+    <aside class="number-panel" id="numberPanel" aria-labelledby="numberScaleTitle">
+        <h2 id="numberScaleTitle">Die Zahlen-Entdeckerleiste</h2>
+        <label for="scaleMode">So sieht deine Skala aus:</label>
+        <select id="scaleMode" aria-describedby="scaleDescription">
+            <option value="linear">Gleichmäßig: gleiche Abstände</option>
+            <option value="logarithmic" selected>Lupe: mehr Platz für kleine Zahlen</option>
+        </select>
+        <p id="scaleDescription"></p>
+        <p id="scaleHelp">Ziehe den blauen Punkt mit der Maus oder dem Finger, um den Zählerstand zu ändern.
+            Mit den Pfeiltasten geht es in Einerschritten, mit Bild auf/ab in Hunderterschritten.
+            Pos1 springt auf 0, Ende auf 9999.</p>
+        <output class="scale-reading" id="scaleReading" for="scaleMarker">Dein Punkt: 0</output>
+        <div class="number-scale" id="numberScale">
+            <div class="scale-rail" aria-hidden="true"></div>
+            <span class="scale-bound maximum">9999</span>
+            <span class="scale-bound minimum">0</span>
+            <svg class="scale-connections" id="scaleConnections" viewBox="0 0 90 560" aria-hidden="true"></svg>
+            <ul class="scale-facts" id="scaleFacts" aria-label="Zahlenbeispiele"></ul>
+            <div class="scale-marker" id="scaleMarker" role="slider" tabindex="0"
+                aria-label="Zählerstand einstellen" aria-describedby="scaleHelp"
+                aria-orientation="vertical" aria-valuemin="0" aria-valuemax="9999" aria-valuenow="0"></div>
+        </div>
+        <p>Hier vergleichen wir <strong>Zahlen</strong>, nicht Einheiten:
+            100 km/h ist eine Geschwindigkeit, 100 kg ein Gewicht.
+            Die Linien zeigen die genaue Stelle der Beispielzahlen auf der Skala.</p>
+        <details>
+            <summary>Über die Beispiele</summary>
+            <p>Die Tierwerte sind grobe Richtwerte, keine Rekorde.
+                Schnecke, Kind und Haus sind Rechenbeispiele: Eine Schnecke könnte
+                in einer Stunde 3 m kriechen, ein Kind könnte 30 kg wiegen und
+                ein Haus könnte 200 t wiegen. Die wirklichen Werte sind unterschiedlich.
+                1 t = 1000 kg; 1 m³ = 1000 Liter.</p>
+            <p>Tierinfos:
+                <a href="https://kids.nationalgeographic.com/animals/mammals/facts/cheetah" target="_blank" rel="noopener noreferrer">Gepard</a>
+                und <a href="https://kids.nationalgeographic.com/animals/mammals/facts/african-elephant" target="_blank" rel="noopener noreferrer">Afrikanischer Elefant</a>
+                (auf Englisch).</p>
+        </details>
+    </aside>
+    </main>
+
+    <script>
+        let currentValue = 0;
+        const maxDigits = 4;
+        const maxValue = 9999;
+        const ids = ['thousands', 'hundreds', 'tens', 'units'];
+        const digitHeight = 64;
+        let audioContext;
+        const scaleMode = document.getElementById('scaleMode');
+        const scaleHeight = 560;
+        const numberFacts = [
+            { value: 5000, unit: 'kg', label: 'Ein ausgewachsener Elefant: ein echter Schwergewichtler!', approximate: true },
+            { value: 1000, unit: 'Liter', label: 'So viel Wasser passt in einen Würfel mit 1 m langen Kanten.' },
+            { value: 200, unit: 't', label: 'So schwer könnte ein Haus sein. Nichts für den Schulrucksack!', approximate: true },
+            { value: 100, unit: 'km/h', label: 'Ein Gepard im Sprint. Bitte nicht um die Wette laufen!', approximate: true },
+            { value: 30, unit: 'kg', label: 'So viel könnte ein Kind wiegen. Jeder Mensch ist anders!', approximate: true },
+            { value: 3, unit: 'm pro Stunde', label: 'Eine Schnecke auf gemütlicher Reise: ein Rechenbeispiel.', approximate: true }
+        ];
+
+        function scalePosition(value) {
+            const fraction = scaleMode.value === 'linear'
+                ? value / maxValue
+                : Math.log1p(value) / Math.log1p(maxValue);
+            return (1 - fraction) * scaleHeight;
+        }
+
+        function updateScaleMarker() {
+            const marker = document.getElementById('scaleMarker');
+            marker.style.top = `${scalePosition(currentValue)}px`;
+            marker.setAttribute('aria-valuenow', currentValue);
+            document.getElementById('scaleReading').textContent = `Dein Punkt: ${currentValue}`;
+        }
+
+        function setScaleValue(value) {
+            currentValue = Math.max(0, Math.min(maxValue, value));
+            updateDisplay();
+            document.getElementById('explanationText').textContent =
+                `Zählerstand ${currentValue}: Du hast die Zahl mit dem blauen Punkt eingestellt.`;
+        }
+
+        function moveScalePoint(event) {
+            const bounds = document.getElementById('numberScale').getBoundingClientRect();
+            const fraction = Math.max(0, Math.min(1, (bounds.bottom - event.clientY) / bounds.height));
+            const value = scaleMode.value === 'linear'
+                ? fraction * maxValue
+                : Math.expm1(fraction * Math.log1p(maxValue));
+            setScaleValue(Math.round(value));
+        }
+
+        function renderScale() {
+            document.getElementById('scaleDescription').textContent = scaleMode.value === 'linear'
+                ? 'Von 0 unten bis 9999 oben: Gleiche Zahlenunterschiede haben gleiche Abstände. Kleine Zahlen liegen dicht beieinander.'
+                : 'Von 0 unten bis 9999 oben: Die Lupe vergrößert den Bereich der kleinen Zahlen. Die Abstände sind logarithmisch (mit Zahl + 1, damit auch 0 Platz hat), nicht gleichmäßig.';
+            const facts = document.getElementById('scaleFacts');
+            const connections = document.getElementById('scaleConnections');
+            facts.replaceChildren();
+            connections.replaceChildren();
+            const positions = numberFacts.map(fact => scalePosition(fact.value));
+            // Move labels, not their scale anchors, to keep clustered examples readable.
+            for (let i = 0; i < positions.length; i++) {
+                positions[i] = Math.max(36, positions[i], i === 0 ? 0 : positions[i - 1] + 82);
+            }
+            for (let i = positions.length - 1; i >= 0; i--) {
+                positions[i] = Math.min(positions[i], i === positions.length - 1
+                    ? scaleHeight - 36 : positions[i + 1] - 82);
+            }
+            numberFacts.forEach((fact, index) => {
+                const item = document.createElement('li');
+                item.className = 'scale-fact';
+                item.style.top = `${positions[index]}px`;
+                const value = document.createElement('strong');
+                value.textContent = `${fact.approximate ? 'ca. ' : ''}${fact.value} ${fact.unit}`;
+                item.append(value, document.createTextNode(fact.label));
+                facts.appendChild(item);
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const anchor = scalePosition(fact.value);
+                line.setAttribute('d', `M 19 ${anchor} H 34 L 86 ${positions[index]}`);
+                connections.appendChild(line);
+            });
+            updateScaleMarker();
+        }
+
+        function initStrips() {
+            ids.forEach(id => {
+                const strip = document.getElementById(id);
+                strip.innerHTML = '';
+                for (let i = 0; i < 30; i++) {
+                    const digit = document.createElement('span');
+                    digit.className = 'digit';
+                    digit.textContent = i % 10;
+                    strip.appendChild(digit);
+                }
+            });
+        }
+
+        function updateDisplay(previousValue = currentValue, direction = 0) {
+            const valStr = String(currentValue).padStart(maxDigits, '0');
+            const previousStr = String(previousValue).padStart(maxDigits, '0');
+
+            ids.forEach((id, index) => {
+                const digit = Number(valStr[index]);
+                const previousDigit = Number(previousStr[index]);
+                const strip = document.getElementById(id);
+                strip.getAnimations().forEach(animation => animation.cancel());
+                const transform = position => `translateY(-${position * digitHeight}px)`;
+                strip.style.transform = transform(10 + digit);
+                if (direction !== 0 && digit !== previousDigit &&
+                    !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                    const distance = direction > 0
+                        ? (digit - previousDigit + 10) % 10
+                        : -((previousDigit - digit + 10) % 10);
+                    // The repeated digits let 9 and 0 roll past each other in either direction.
+                    strip.animate([
+                        { transform: transform(10 + previousDigit) },
+                        { transform: transform(10 + previousDigit + distance) }
+                    ], { duration: 420, easing: 'ease-in-out' });
+                }
+            });
+
+            document.getElementById('odometer').setAttribute(
+                'aria-label', `Aktueller Zählerstand: ${currentValue}. Klicken, um 1 zu addieren.`
+            );
+            updateScaleMarker();
+        }
+
+        function updateExplanation(previousValue, amount) {
+            const exp = document.getElementById('explanationText');
+            const place = Math.abs(amount);
+            const crossedPlace = Math.floor(previousValue / (place * 10)) !==
+                Math.floor(currentValue / (place * 10));
+            if (amount === 0) {
+                exp.textContent = "Zählerstand 0: Jede Spalte steht für einen Stellenwert: Einer, Zehner, Hunderter oder Tausender.";
+            } else if (previousValue + amount > maxValue) {
+                exp.textContent = `${previousValue} + ${amount} = ${previousValue + amount}. Das Zählwerk springt auf ${currentValue}, weil seine vier Zahlenräder nur Zahlen von 0 bis 9999 anzeigen können.`;
+            } else {
+                const equation = `${previousValue} ${amount > 0 ? '+' : '-'} ${place} = ${currentValue}.`;
+                const placeName = { 1: 'Einer', 10: 'Zehner', 100: 'Hunderter', 1000: 'Tausender' }[place];
+                const explanation = crossedPlace
+                    ? (amount > 0
+                        ? ` Übertrag! 10 Gruppen zu je ${place} werden zu einer Gruppe mit ${place * 10}; die Zahlenräder drehen sich von 9 auf 0.`
+                        : ` Entbündeln! Eine Gruppe mit ${place * 10} wird in 10 Gruppen zu je ${place} aufgeteilt; die Zahlenräder drehen sich rückwärts von 0 auf 9.`)
+                    : ` Das ${placeName}rad dreht sich einen Schritt ${amount > 0 ? 'vorwärts' : 'rückwärts'}.`;
+                exp.textContent = equation + explanation;
+            }
+        }
+
+        async function playFunnyNoise() {
+            try {
+                audioContext ??= new AudioContext();
+                await audioContext.resume();
+                const start = audioContext.currentTime;
+                const oscillator = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                oscillator.type = 'triangle';
+                oscillator.frequency.setValueAtTime(260, start);
+                oscillator.frequency.exponentialRampToValueAtTime(90, start + 0.16);
+                oscillator.frequency.exponentialRampToValueAtTime(340, start + 0.3);
+                oscillator.frequency.exponentialRampToValueAtTime(70, start + 0.48);
+                gain.gain.setValueAtTime(0, start);
+                gain.gain.linearRampToValueAtTime(0.15, start + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, start + 0.5);
+                oscillator.connect(gain);
+                gain.connect(audioContext.destination);
+                oscillator.onended = () => {
+                    oscillator.disconnect();
+                    gain.disconnect();
+                };
+                oscillator.start(start);
+                oscillator.stop(start + 0.5);
+            } catch (error) {
+                console.warn('Der Ton beim Subtrahieren konnte nicht abgespielt werden.', error);
+                document.getElementById('explanationText').textContent +=
+                    ' Der lustige Ton konnte in diesem Browser nicht abgespielt werden.';
+            }
+        }
+
+        function changeValue(amount) {
+            const previousValue = currentValue;
+            if (currentValue + amount < 0) {
+                currentValue = 0;
+                updateDisplay(previousValue, -1);
+                document.getElementById('explanationText').textContent =
+                    `Boing! ${previousValue} - ${Math.abs(amount)} wäre kleiner als null. Dieses Zählwerk bleibt bei 0 stehen.`;
+                playFunnyNoise();
+                return;
+            }
+            currentValue = (currentValue + amount) % (maxValue + 1);
+            updateDisplay(previousValue, Math.sign(amount));
+            updateExplanation(previousValue, amount);
+        }
+
+        function reset() {
+            currentValue = 0;
+            updateDisplay();
+            updateExplanation(0, 0);
+        }
+
+        document.getElementById('odometer').addEventListener('click', () => changeValue(1));
+        document.querySelectorAll('[data-change]').forEach(button => {
+            button.addEventListener('click', () => changeValue(Number(button.dataset.change)));
+        });
+        document.getElementById('resetBtn').addEventListener('click', reset);
+        scaleMode.addEventListener('change', renderScale);
+        const numberScale = document.getElementById('numberScale');
+        const scaleMarker = document.getElementById('scaleMarker');
+        numberScale.addEventListener('pointerdown', event => {
+            if (event.button !== 0 || !event.isPrimary ||
+                !event.target.matches('.scale-marker, .scale-rail')) {
+                return;
+            }
+            event.preventDefault();
+            numberScale.setPointerCapture(event.pointerId);
+            numberScale.classList.add('dragging');
+            scaleMarker.focus({ preventScroll: true });
+            moveScalePoint(event);
+        });
+        numberScale.addEventListener('pointermove', event => {
+            if (numberScale.hasPointerCapture(event.pointerId)) {
+                moveScalePoint(event);
+            }
+        });
+        numberScale.addEventListener('pointerup', event => {
+            if (numberScale.hasPointerCapture(event.pointerId)) {
+                moveScalePoint(event);
+                numberScale.releasePointerCapture(event.pointerId);
+            }
+        });
+        numberScale.addEventListener('lostpointercapture', () => {
+            numberScale.classList.remove('dragging');
+        });
+        scaleMarker.addEventListener('keydown', event => {
+            const values = {
+                ArrowUp: currentValue + 1,
+                ArrowRight: currentValue + 1,
+                ArrowDown: currentValue - 1,
+                ArrowLeft: currentValue - 1,
+                PageUp: currentValue + 100,
+                PageDown: currentValue - 100,
+                Home: 0,
+                End: maxValue
+            };
+            if (Object.hasOwn(values, event.key)) {
+                event.preventDefault();
+                setScaleValue(values[event.key]);
+            }
+        });
+        document.getElementById('toggleScaleBtn').addEventListener('click', event => {
+            const panel = document.getElementById('numberPanel');
+            panel.hidden = !panel.hidden;
+            document.querySelector('.learning-layout').classList.toggle('scale-hidden', panel.hidden);
+            event.currentTarget.setAttribute('aria-expanded', !panel.hidden);
+            event.currentTarget.textContent = panel.hidden
+                ? 'Entdeckerleiste einblenden' : 'Entdeckerleiste ausblenden';
+        });
+
+        initStrips();
+        renderScale();
+        updateDisplay();
+        updateExplanation(0, 0);
+    </script>
+</body>
+</html>

@@ -32,44 +32,54 @@ und 1000.
 Unter dem Zählwerk kann eine Seitenansicht der Mechanik eingeblendet werden.
 Sie ist beim Laden ausgeblendet; die runde Taste ⚙ unter ▶ blendet sie ein
 und wieder aus. Aus Platzgründen zeigt sie nur Hunderter, Zehner und Einer;
-das Tausenderrad fehlt nur in dieser Ansicht. Alle Teile drehen sich synchron
-mit den Zahlenrädern. Ein festes Sichtfenster oben auf jedem Rad rahmt die
-angezeigte Ziffer ein.
+das Tausenderrad fehlt nur in dieser Ansicht. Alle Teile bewegen sich
+synchron mit den Zahlenrädern. Ein grünes Sichtfenster oben auf jedem Rad
+rahmt die angezeigte Ziffer ein.
 
-- Jedes große Zahlenrad trägt außen einen Kranz aus 20 kleinen Stiften,
-  also zwei Stifte pro Ziffer. Dazu hat es einen dünnen rosa Arm mit zwei
-  rosa Fingerstiften. Die 9 ist rosa eingefärbt: Steht sie im Fenster, zeigt
-  der Arm schräg nach oben links zum Sternrad.
-- Zwischen zwei Zahlenrädern sitzt ein kleines Sternrad mit 5 schlanken
-  Gabelspeichen. In den Gabeln stecken immer Stifte des linken (höheren)
-  Rades. Dreht sich dieses Rad, dreht sich das Sternrad mit, und umgekehrt.
-- Die Fingerstifte des rechten Rades erreichen das Sternrad nur beim
-  Schritt von 9 auf 0. Sie gleiten in zwei Gabeln und drehen das Sternrad um
-  zwei Speichen (144°) weiter. Das Sternrad schiebt dabei zwei Stifte des
-  linken Rades weiter, also genau eine Ziffer: 10 Einer werden zu 1 Zehner.
-  Das Sternrad leuchtet dabei rosa und zeigt „+1“.
-- Beim Rückwärtszählen von 0 auf 9 läuft derselbe Vorgang rückwärts und
-  zeigt „−1“. Bei 99 + 1 schiebt der Zehner-Finger während des Übertrags
-  gleich den Hunderter mit.
-- Wie in einem echten Zählwerk liegen Stifte, Finger und Sternräder in zwei
-  Ebenen (vorne/hinten, die hintere ist etwas dunkler). So erreicht jeder
-  Finger nur sein eigenes Sternrad. Der rosa Arm läuft auf der Scheibe und
-  kreuzt in der Zeichnung deshalb manchmal ein Sternrad, ohne es zu berühren.
+- Jedes Zahlenrad trägt vorne ein blaues Klinkenrad mit 10 schrägen Zähnen,
+  also einen Zahn pro Ziffer.
+- Hinter jedem Zahlenrad sitzt ein rosa Nocken genau auf der 9; die 9 ist
+  ebenfalls rosa. Steht die 9 im Fenster, zeigt der Nocken senkrecht nach
+  oben und ragt über den Rand des Zifferblatts hinaus.
+- Zwischen zwei Rädern liegt eine gerade grüne Stange in zwei festen
+  Führungen. Ihre Spitze sitzt in einer Kerbe des linken (höheren)
+  Klinkenrads, ihr rechtes Ende liegt im Weg des Nockens des rechten Rades.
+- Beim Schritt von 9 auf 0 schiebt der Nocken die Stange zur Seite. Die
+  Stangenspitze schiebt dabei einen Zahn des linken Klinkenrads weiter,
+  genau eine Ziffer: 10 Einer werden zu 1 Zehner. An der Stangenspitze
+  leuchtet es rosa und „+1“ erscheint.
+- Hat der Nocken die Stange losgelassen, drückt eine Feder zwischen Bund und
+  linker Führung sie zurück. Die Spitze kippt dabei leicht in der rechten
+  Führung, gleitet über die schräge Seite des nächsten Zahns und rastet in
+  der nächsten Kerbe ein.
+- Bei 99 + 1 schiebt der Zehner-Nocken während des Übertrags gleich die
+  Stange zum Hunderter mit.
+- Beim Rückwärtszählen von 0 auf 9 läuft dieselbe Bewegung rückwärts und
+  zeigt „−1“. Ein echtes Klinkenrad könnte das nicht; die Animation zeigt
+  die Bewegung nur rückwärts abgespielt.
 - Bei 9999 + 1 gibt es kein fünftes Rad; das Zählwerk beginnt bei 0.
 
-Die Maße stehen als `gearDesign` in `odometer.html`. Das Skript
-[tools/check-gear-mechanism.cjs](./tools/check-gear-mechanism.cjs) baut
-daraus alle Teile als Polygone nach, dreht das Getriebe in kleinen Schritten
-und meldet jede unerlaubte Berührung, falsche Ziffern und zu starkes
-Nachrasten:
+Die Maße stehen als `gearDesign` in `odometer.html`, die Bewegung berechnet
+der Code zwischen `// gear mechanism start` und `// gear mechanism end`.
+Das Skript [tools/check-gear-mechanism.cjs](./tools/check-gear-mechanism.cjs)
+führt genau diesen Code aus und prüft:
+
+- Ein Übertrag dreht das linke Rad um eine Ziffer (Abweichung höchstens
+  `gearDesign.check.maxSettle` Grad).
+- Der Nocken lässt die Stange im Schritt los, und die Stange ist vor dem
+  Schrittende wieder in Ruhe.
+- Ein Nocken berührt eine Stange nur in seinem eigenen Schritt von 9 auf 0.
+- Die Stangenspitze schiebt an der steilen Zahnflanke und rutscht nicht über
+  die Zahnspitze; sie schneidet nie in ein Klinkenrad.
+- Die Stange verdeckt kein Sichtfenster, ihr Ende liegt außerhalb der
+  Zifferblätter, und sie berührt keine fremden Klinkenräder.
 
 ```bash
-node tools/check-gear-mechanism.cjs           # muss mit "Getriebe OK" enden
-node tools/check-gear-mechanism.cjs --curves  # Bewegungskurven für gearCurves
+node tools/check-gear-mechanism.cjs   # muss mit "Getriebe OK" enden
 ```
 
-Nach jeder Änderung an `gearDesign` beide Befehle ausführen und die
-ausgegebenen Kurven in `gearCurves` übernehmen.
+Nach jeder Änderung an `gearDesign` oder am Mechanik-Code das Skript
+ausführen.
 
 [getriebe.svg](./getriebe.svg) ist ein statisches Einzelbild dieser
 Ansicht bei 199 zum Ansehen oder Ausdrucken. Es ist aus der Seite

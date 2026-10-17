@@ -608,7 +608,12 @@
         const gearCenters = ids.map((_, index) => ({ x: 75 + index * 150, y: 86 }));
         const pinionOffset = { x: 68, y: -42 };
         const pinionBaseAngle = 72;
-        const carryToothAngle = 279;
+        // The reading window sits at the upper left, right where the carry tooth meets the
+        // intermediate gear. So the tooth can sit exactly on the 9: it is under the window
+        // while 9 is shown and grips during the next step to 0.
+        const windowAngle = -45;
+        const windowRadius = 41;
+        const carryToothAngle = 9 * 36;
         const placeNames = ['Tausender', 'Hunderter', 'Zehner', 'Einer'];
         const gearParts = ids.map(() => ({ turning: [], pinion: null, glow: null, badge: null }));
 
@@ -620,9 +625,6 @@
         }
 
         function buildGears() {
-            gearCenters.forEach(({ x, y }) => {
-                svgElement('circle', { cx: x + 5, cy: y + 7, r: 61, fill: '#8f8a7c', opacity: '.45' }, gearSvg);
-            });
             // Carry teeth sit one layer behind the wheels so the digits stay fully visible.
             gearCenters.forEach((_, index) => {
                 const tooth = svgElement('g', { class: 'turning' }, gearSvg);
@@ -644,7 +646,9 @@
                 svgElement('circle', { r: 28, fill: 'none', stroke: '#b9b4a4', 'stroke-width': 1 }, disc);
                 for (let digit = 0; digit < 10; digit++) {
                     const label = svgElement('text', {
-                        class: 'gear-digit', x: 0, y: -41, transform: `rotate(${digit * 36})`
+                        class: 'gear-digit', x: 0, y: 0,
+                        // Upright when the digit is in the reading window.
+                        transform: `rotate(${digit * 36}) translate(0 ${-windowRadius}) rotate(${-windowAngle})`
                     }, disc);
                     label.textContent = digit;
                 }
@@ -658,7 +662,6 @@
                 const cx = x + pinionOffset.x;
                 const cy = y + pinionOffset.y;
                 gearParts[index].glow = svgElement('circle', { cx, cy, r: 34, fill: 'url(#carryGlow)', opacity: 0 }, gearSvg);
-                svgElement('circle', { cx: cx + 3, cy: cy + 4, r: 13, fill: '#8f8a7c', opacity: '.45' }, gearSvg);
                 const pinion = svgElement('g', { class: 'turning' }, gearSvg);
                 for (let arm = 0; arm < 4; arm++) {
                     svgElement('rect', {
@@ -674,8 +677,11 @@
             });
             // A fixed reading window over each wheel frames the digit that is shown.
             gearCenters.forEach(({ x, y }) => {
+                const radians = windowAngle * Math.PI / 180;
+                const wx = x + windowRadius * Math.sin(radians);
+                const wy = y - windowRadius * Math.cos(radians);
                 svgElement('rect', {
-                    x: x - 13, y: y - 55, width: 26, height: 28, rx: 5,
+                    x: wx - 13, y: wy - 14, width: 26, height: 28, rx: 5,
                     fill: 'url(#windowGlass)', stroke: '#2b2b2b', 'stroke-width': 3
                 }, gearSvg);
             });
@@ -684,7 +690,7 @@
         // Wheel positions use the same scale as the digit strips: position 10 + digit.
         function discTransform(index, position) {
             const { x, y } = gearCenters[index];
-            return `translate(${x}px, ${y}px) rotate(${-position * 36}deg)`;
+            return `translate(${x}px, ${y}px) rotate(${windowAngle - position * 36}deg)`;
         }
 
         function pinionTransform(index, position) {

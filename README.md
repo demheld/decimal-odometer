@@ -32,10 +32,13 @@ und 1000.
 Unter dem Zählwerk kann eine Seitenansicht der Mechanik eingeblendet werden.
 Sie ist beim Laden ausgeblendet; die runde Taste ⚙ unter ▶ blendet sie ein
 und wieder aus. Die Zahnräder drehen sich synchron mit den Zahlenrädern.
-Ein festes Sichtfenster oben auf jedem Rad rahmt die angezeigte Ziffer ein:
+Ein festes Sichtfenster oben links auf jedem Rad rahmt die angezeigte
+Ziffer ein. Es sitzt dort, wo der Mitnehmer auf das Zwischenrad trifft:
 
-- Jedes Zahlenrad hat einen Zahnkranz und genau einen rosa Mitnehmer, der
-  hinter dem Rad liegt und nur am Rand herausragt.
+- Jedes Zahlenrad hat einen Zahnkranz und genau einen rosa Mitnehmer. Er
+  liegt hinter dem Rad, ragt nur am Rand heraus und sitzt genau bei der 9.
+  Steht eine 9 im Fenster, zeigt der Mitnehmer also direkt auf das
+  Zwischenrad.
 - Zwischen zwei Rädern sitzt ein kleines Zwischenrad. Es greift immer in
   den Zahnkranz des linken (höheren) Rades.
 - Der Mitnehmer des rechten Rades erreicht das Zwischenrad nur beim

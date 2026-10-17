@@ -32,7 +32,69 @@ sowie eine einblendbare Zahlen-Entdeckerleiste.
 [odometer.html](./odometer.html) direkt in einem aktuellen Browser öffnen.
 Es werden keine externen Skripte, Schriften oder Audiodateien geladen.
 
-## Mit Docker bereitstellen
+## Auf einem Server bereitstellen (deploy.sh)
+
+Voraussetzung auf dem Server: `git`, Docker mit Compose-Plugin und
+Lesezugriff auf das private Repository (z. B. per SSH-Deploy-Key oder
+Personal Access Token).
+
+Einmalig klonen und starten:
+
+```sh
+git clone git@github.com:demheld/decimal-odometer.git
+cd decimal-odometer
+chmod +x deploy.sh   # nur falls das Ausführungsrecht fehlt
+./deploy.sh
+```
+
+Für jede spätere Aktualisierung im Projektverzeichnis erneut
+`./deploy.sh` ausführen. Das Skript
+
+1. holt den Branch `main` (anderer Branch über `DEPLOY_BRANCH=<name>`)
+   und aktualisiert ihn per Fast-Forward; lokale Änderungen oder
+   abweichende Historie brechen das Skript ab,
+2. baut das Image mit `docker compose build --pull` neu,
+3. startet den Container mit `docker compose up -d --remove-orphans`
+   (ersetzt ihn nur, wenn sich das Image oder die Konfiguration geändert hat),
+4. zeigt den Status mit `docker compose ps`.
+
+Die Portbindung lässt sich auch hier über `ODOMETER_PORT` setzen, z. B.
+`ODOMETER_PORT=127.0.0.1:8080 ./deploy.sh` hinter einem Reverse Proxy
+(siehe unten).
+
+## Mit Docker Compose bereitstellen
+
+Voraussetzung: Docker mit Compose-Plugin (`docker compose`) und
+Unterstützung für Linux-Container. Im Projektverzeichnis ausführen:
+
+```sh
+docker compose up -d --build
+```
+
+Compose baut das Image `decimal-odometer:local` aus dem [Dockerfile](./Dockerfile)
+(mit aktuellem Basisimage), startet den Container `decimal-odometer` mit
+`restart: unless-stopped` und veröffentlicht ihn auf Host-Port 8080.
+Die Seite ist dann unter `http://localhost:8080/` erreichbar.
+
+Die Portbindung wird über die Umgebungsvariable `ODOMETER_PORT` gesteuert
+(Standard: `8080`). Beispiele, alternativ in einer `.env`-Datei neben
+`docker-compose.yml`:
+
+```sh
+ODOMETER_PORT=8081 docker compose up -d --build            # anderer Host-Port
+ODOMETER_PORT=127.0.0.1:8080 docker compose up -d --build  # nur lokal, für Reverse Proxy
+```
+
+Weitere Befehle:
+
+```sh
+docker compose ps                 # Status
+docker compose logs -f            # Logs
+git pull && docker compose up -d --build   # aktualisieren
+docker compose down               # stoppen und Container entfernen
+```
+
+## Mit Docker bereitstellen (ohne Compose)
 
 Voraussetzung: Docker mit Unterstützung für Linux-Container.
 Die folgenden Befehle im Projektverzeichnis ausführen:
@@ -91,6 +153,10 @@ docker run -d --name decimal-odometer --restart unless-stopped -p 8080:8080 deci
 
 Bei Betrieb hinter einem Reverse Proxy stattdessen wieder die lokale
 Portbindung `-p 127.0.0.1:8080:8080` verwenden.
+
+Compose, `deploy.sh` und `docker run` verwenden denselben Containernamen
+`decimal-odometer`. Einen per `docker run` gestarteten Container vor dem
+Wechsel zu Compose mit `docker rm -f decimal-odometer` entfernen.
 
 Diese Anleitung startet den Container auf dem jeweiligen Docker-Host.
 Sie veröffentlicht kein Image in einer Registry und richtet keinen

@@ -126,20 +126,6 @@
             flex: 0 0 calc(var(--wheel-width) + 6px);
             white-space: nowrap;
         }
-        .explanation {
-            margin-top: 20px;
-            max-width: 500px;
-            text-align: center;
-            font-size: 14px;
-            color: #444;
-            background: #fff;
-            padding: 15px;
-            border-radius: 6px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            box-sizing: border-box;
-            width: 100%;
-            min-height: 6.5em;
-        }
         .learning-layout {
             display: grid;
             grid-template-columns: minmax(0, 520px);
@@ -363,10 +349,6 @@
         <button id="resetBtn">Zurücksetzen</button>
         <button id="toggleScaleBtn" aria-controls="numberPanel" aria-expanded="false">Entdeckerleiste einblenden</button>
     </div>
-
-    <div class="explanation" id="explanationText" role="status" aria-live="polite" aria-atomic="true">
-        Bereit zum Zählen! Jede Spalte steht für einen Stellenwert: Einer, Zehner, Hunderter oder Tausender.
-    </div>
     </section>
 
     <aside class="number-panel" id="numberPanel" aria-labelledby="numberScaleTitle" hidden>
@@ -444,8 +426,6 @@
         function setScaleValue(value) {
             currentValue = Math.max(0, Math.min(maxValue, value));
             updateDisplay();
-            document.getElementById('explanationText').textContent =
-                `Zählerstand ${currentValue}: Du hast die Zahl mit dem blauen Punkt eingestellt.`;
         }
 
         function moveScalePoint(event) {
@@ -533,27 +513,6 @@
             updateScaleMarker();
         }
 
-        function updateExplanation(previousValue, amount) {
-            const exp = document.getElementById('explanationText');
-            const place = Math.abs(amount);
-            const crossedPlace = Math.floor(previousValue / (place * 10)) !==
-                Math.floor(currentValue / (place * 10));
-            if (amount === 0) {
-                exp.textContent = "Zählerstand 0: Jede Spalte steht für einen Stellenwert: Einer, Zehner, Hunderter oder Tausender.";
-            } else if (previousValue + amount > maxValue) {
-                exp.textContent = `${previousValue} + ${amount} = ${previousValue + amount}. Das Zählwerk springt auf ${currentValue}, weil seine vier Zahlenräder nur Zahlen von 0 bis 9999 anzeigen können.`;
-            } else {
-                const equation = `${previousValue} ${amount > 0 ? '+' : '-'} ${place} = ${currentValue}.`;
-                const placeName = { 1: 'Einer', 10: 'Zehner', 100: 'Hunderter', 1000: 'Tausender' }[place];
-                const explanation = crossedPlace
-                    ? (amount > 0
-                        ? ` Übertrag! 10 Gruppen zu je ${place} werden zu einer Gruppe mit ${place * 10}; die Zahlenräder drehen sich von 9 auf 0.`
-                        : ` Entbündeln! Eine Gruppe mit ${place * 10} wird in 10 Gruppen zu je ${place} aufgeteilt; die Zahlenräder drehen sich rückwärts von 0 auf 9.`)
-                    : ` Das ${placeName}rad dreht sich einen Schritt ${amount > 0 ? 'vorwärts' : 'rückwärts'}.`;
-                exp.textContent = equation + explanation;
-            }
-        }
-
         async function playFunnyNoise() {
             try {
                 audioContext ??= new AudioContext();
@@ -579,8 +538,6 @@
                 oscillator.stop(start + 0.5);
             } catch (error) {
                 console.warn('Der Ton beim Subtrahieren konnte nicht abgespielt werden.', error);
-                document.getElementById('explanationText').textContent +=
-                    ' Der lustige Ton konnte in diesem Browser nicht abgespielt werden.';
             }
         }
 
@@ -589,14 +546,11 @@
             if (currentValue + amount < 0) {
                 currentValue = 0;
                 updateDisplay(previousValue, -1);
-                document.getElementById('explanationText').textContent =
-                    `Boing! ${previousValue} - ${Math.abs(amount)} wäre kleiner als null. Dieses Zählwerk bleibt bei 0 stehen.`;
                 playFunnyNoise();
                 return;
             }
             currentValue = (currentValue + amount) % (maxValue + 1);
             updateDisplay(previousValue, Math.sign(amount));
-            updateExplanation(previousValue, amount);
         }
 
         let countingInterval = null;
@@ -627,7 +581,6 @@
             stopCounting();
             currentValue = 0;
             updateDisplay();
-            updateExplanation(0, 0);
         }
 
         document.getElementById('odometer').addEventListener('click', () => changeValue(1));
@@ -690,7 +643,6 @@
         initStrips();
         renderScale();
         updateDisplay();
-        updateExplanation(0, 0);
     </script>
 </body>
 </html>

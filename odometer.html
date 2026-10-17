@@ -509,9 +509,12 @@
             });
         }
 
-        function updateDisplay(previousValue = currentValue, direction = 0) {
+        function updateDisplay(previousValue = currentValue, direction = 0, easing = 'ease-in-out') {
             const valStr = String(currentValue).padStart(maxDigits, '0');
             const previousStr = String(previousValue).padStart(maxDigits, '0');
+
+            const changedIndexes = ids.map((_, index) => valStr[index] !== previousStr[index]);
+            const leadingIndex = changedIndexes.lastIndexOf(true);
 
             ids.forEach((id, index) => {
                 const digit = Number(valStr[index]);
@@ -526,10 +529,11 @@
                         ? (digit - previousDigit + 10) % 10
                         : -((previousDigit - digit + 10) % 10);
                     // The repeated digits let 9 and 0 roll past each other in either direction.
+                    // Only the wheel that moves every step follows the run's easing; carry wheels roll softly.
                     strip.animate([
                         { transform: transform(10 + previousDigit) },
                         { transform: transform(10 + previousDigit + distance) }
-                    ], { duration: stepDuration, easing: 'ease-in-out' });
+                    ], { duration: stepDuration, easing: index === leadingIndex ? easing : 'ease-in-out' });
                 }
             });
 
@@ -567,7 +571,7 @@
             }
         }
 
-        function changeValue(amount) {
+        function changeValue(amount, easing) {
             const previousValue = currentValue;
             if (currentValue + amount < 0) {
                 currentValue = 0;
@@ -576,12 +580,22 @@
                 return;
             }
             currentValue = (currentValue + amount) % (maxValue + 1);
-            updateDisplay(previousValue, Math.sign(amount));
+            updateDisplay(previousValue, Math.sign(amount), easing);
+        }
+
+        // Back-to-back steps share one motion: accelerate, roll at constant speed, decelerate.
+        // The curves end/start with slope 1 so their speed matches the linear middle steps.
+        function easingFor(continuesPrevious, continuesNext) {
+            if (continuesPrevious && continuesNext) return 'linear';
+            if (continuesNext) return 'cubic-bezier(0.5, 0, 0.5, 0.5)';
+            if (continuesPrevious) return 'cubic-bezier(0.5, 0.5, 0.5, 1)';
+            return 'ease-in-out';
         }
 
         // Clicks are queued so the wheels never move faster than one roll animation per step.
         const pendingChanges = [];
         let stepTimer = null;
+        let lastStep = null;
         const smoothCounting = document.getElementById('smoothCounting');
 
         function queueChange(amount) {
@@ -599,14 +613,20 @@
             const change = pendingChanges[0];
             if (!change) {
                 stepTimer = null;
+                lastStep = null;
                 return;
             }
             const hitsZero = currentValue + change.step < 0;
-            changeValue(change.step);
             change.count--;
             if (hitsZero || change.count === 0) {
                 pendingChanges.shift();
             }
+            const next = pendingChanges[0];
+            const continuesPrevious = lastStep === change.step;
+            const continuesNext = !hitsZero && next !== undefined && next.step === change.step &&
+                currentValue + 2 * change.step >= 0;
+            changeValue(change.step, easingFor(continuesPrevious, continuesNext));
+            lastStep = continuesNext ? change.step : null;
             const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
             stepTimer = setTimeout(processNextChange, reducedMotion ? 0 : stepDuration);
         }
@@ -615,6 +635,7 @@
             pendingChanges.length = 0;
             clearTimeout(stepTimer);
             stepTimer = null;
+            lastStep = null;
         }
 
         let countingInterval = null;

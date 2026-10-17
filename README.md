@@ -20,7 +20,10 @@ und 1000.
   pro Drehung der Zahlenräder (420 ms).
 - Mit „Schrittweise zählen“ wird jede Rechentaste in Einerschritten mit
   derselben Geschwindigkeit ausgeführt: +10 zählt also zehnmal +1
-  (etwa 4 Sekunden), +1000 dauert entsprechend rund 7 Minuten.
+  (etwa 4 Sekunden), +1000 dauert entsprechend rund 7 Minuten. Das
+  Einerrad läuft dabei gleichmäßig durch, ohne bei jeder Zahl anzuhalten;
+  nur am Anfang beschleunigt und am Ende bremst es. Das gilt auch für
+  gesammelte schnelle Klicks mit derselben Taste.
 - Würde das Ergebnis negativ, bleibt das Zählwerk bei 0 und spielt einen
   lustigen Ton. Bei Addition über 9999 beginnt es wieder bei 0.
 

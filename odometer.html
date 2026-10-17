@@ -422,7 +422,7 @@
     </div>
 
     <figure class="gear-view" id="gearView" hidden aria-label="Blick ins Getriebe: Beim Schritt von 9 auf 0 schiebt der rosa Mitnehmer das Zwischenrad an und dreht das nächste Rad um eine Ziffer weiter.">
-        <svg id="gearSvg" viewBox="0 0 600 182" aria-hidden="true">
+        <svg id="gearSvg" viewBox="0 0 540 210" aria-hidden="true">
             <defs>
                 <radialGradient id="discMetal" cx="38%" cy="32%" r="75%">
                     <stop offset="0" stop-color="#ffffff"/>
@@ -600,20 +600,17 @@
             });
         }
 
-        // Side view of the counting mechanism. Each wheel carries one pink carry tooth; during
-        // its step from 9 to 0 the tooth pushes the intermediate gear, which is always meshed
-        // with the next higher wheel and turns it by exactly one digit (36°).
+        // Side view of the counting mechanism. Each wheel carries one pink carry tooth exactly at
+        // its 9. During the step from 9 to 0 the tooth swings up-left into the intermediate gear,
+        // which is always meshed with the next higher wheel and turns it by one digit (36°).
         const svgNs = 'http://www.w3.org/2000/svg';
         const gearSvg = document.getElementById('gearSvg');
-        const gearCenters = ids.map((_, index) => ({ x: 75 + index * 150, y: 86 }));
-        const pinionOffset = { x: 68, y: -42 };
-        const pinionBaseAngle = 72;
-        // The reading window sits at the upper left, right where the carry tooth meets the
-        // intermediate gear. So the tooth can sit exactly on the 9: it is under the window
-        // while 9 is shown and grips during the next step to 0.
-        const windowAngle = -45;
-        const windowRadius = 41;
+        const gearCenters = ids.map((_, index) => ({ x: 75 + index * 130, y: 112 }));
+        const pinionOffset = { x: 65, y: -53 };
+        const pinionBaseAngle = 45;
         const carryToothAngle = 9 * 36;
+        // Carried wheels wait until the tooth reaches the intermediate gear, then turn.
+        const carryStart = 0.5;
         const placeNames = ['Tausender', 'Hunderter', 'Zehner', 'Einer'];
         const gearParts = ids.map(() => ({ turning: [], pinion: null, glow: null, badge: null }));
 
@@ -646,9 +643,7 @@
                 svgElement('circle', { r: 28, fill: 'none', stroke: '#b9b4a4', 'stroke-width': 1 }, disc);
                 for (let digit = 0; digit < 10; digit++) {
                     const label = svgElement('text', {
-                        class: 'gear-digit', x: 0, y: 0,
-                        // Upright when the digit is in the reading window.
-                        transform: `rotate(${digit * 36}) translate(0 ${-windowRadius}) rotate(${-windowAngle})`
+                        class: 'gear-digit', x: 0, y: -41, transform: `rotate(${digit * 36})`
                     }, disc);
                     label.textContent = digit;
                 }
@@ -661,11 +656,11 @@
             gearCenters.slice(0, -1).forEach(({ x, y }, index) => {
                 const cx = x + pinionOffset.x;
                 const cy = y + pinionOffset.y;
-                gearParts[index].glow = svgElement('circle', { cx, cy, r: 34, fill: 'url(#carryGlow)', opacity: 0 }, gearSvg);
+                gearParts[index].glow = svgElement('circle', { cx, cy, r: 36, fill: 'url(#carryGlow)', opacity: 0 }, gearSvg);
                 const pinion = svgElement('g', { class: 'turning' }, gearSvg);
                 for (let arm = 0; arm < 4; arm++) {
                     svgElement('rect', {
-                        x: -4, y: -23, width: 8, height: 23, rx: 3,
+                        x: -4, y: -26, width: 8, height: 26, rx: 3,
                         fill: 'url(#pinionMetal)', stroke: '#4d5560', 'stroke-width': 1,
                         transform: `rotate(${arm * 90})`
                     }, pinion);
@@ -673,15 +668,12 @@
                 svgElement('circle', { r: 9, fill: 'url(#pinionMetal)', stroke: '#4d5560', 'stroke-width': 1 }, pinion);
                 svgElement('circle', { r: 3, fill: '#3b3b3b' }, pinion);
                 gearParts[index].pinion = pinion;
-                gearParts[index].badge = svgElement('text', { class: 'carry-badge', x: cx, y: cy - 30 }, gearSvg);
+                gearParts[index].badge = svgElement('text', { class: 'carry-badge', x: cx, y: cy - 34 }, gearSvg);
             });
-            // A fixed reading window over each wheel frames the digit that is shown.
+            // A fixed reading window at the top of each wheel frames the digit that is shown.
             gearCenters.forEach(({ x, y }) => {
-                const radians = windowAngle * Math.PI / 180;
-                const wx = x + windowRadius * Math.sin(radians);
-                const wy = y - windowRadius * Math.cos(radians);
                 svgElement('rect', {
-                    x: wx - 13, y: wy - 14, width: 26, height: 28, rx: 5,
+                    x: x - 13, y: y - 55, width: 26, height: 28, rx: 5,
                     fill: 'url(#windowGlass)', stroke: '#2b2b2b', 'stroke-width': 3
                 }, gearSvg);
             });
@@ -690,7 +682,7 @@
         // Wheel positions use the same scale as the digit strips: position 10 + digit.
         function discTransform(index, position) {
             const { x, y } = gearCenters[index];
-            return `translate(${x}px, ${y}px) rotate(${windowAngle - position * 36}deg)`;
+            return `translate(${x}px, ${y}px) rotate(${-position * 36}deg)`;
         }
 
         function pinionTransform(index, position) {
@@ -715,18 +707,24 @@
             }
         }
 
-        function animateGear(index, from, to, options) {
+        function stepKeyframes(makeTransform, from, to, carried) {
+            if (!carried) {
+                return [{ transform: makeTransform(from) }, { transform: makeTransform(to) }];
+            }
+            return [
+                { transform: makeTransform(from) },
+                { transform: makeTransform(from), offset: carryStart, easing: 'ease-in-out' },
+                { transform: makeTransform(to) }
+            ];
+        }
+
+        function animateGear(index, from, to, carried, options) {
             gearParts[index].turning.forEach(element => {
-                element.animate([
-                    { transform: discTransform(index, from) },
-                    { transform: discTransform(index, to) }
-                ], options);
+                element.animate(stepKeyframes(position => discTransform(index, position), from, to, carried), options);
             });
             if (gearParts[index].pinion) {
-                gearParts[index].pinion.animate([
-                    { transform: pinionTransform(index, from) },
-                    { transform: pinionTransform(index, to) }
-                ], options);
+                gearParts[index].pinion.animate(
+                    stepKeyframes(position => pinionTransform(index, position), from, to, carried), options);
             }
         }
 
@@ -764,14 +762,13 @@
                         : -((previousDigit - digit + 10) % 10);
                     const from = 10 + previousDigit;
                     const to = from + distance;
-                    // Only the wheel that moves every step follows the run's easing; carry wheels roll softly.
-                    const options = {
-                        duration: stepDuration,
-                        easing: index === leadingIndex ? easing : 'ease-in-out'
-                    };
+                    // Only the wheel that moves every step follows the run's easing. Carried wheels
+                    // wait for the carry tooth and then roll softly.
+                    const carried = index !== leadingIndex;
+                    const options = { duration: stepDuration, easing: carried ? 'linear' : easing };
                     // The repeated digits let 9 and 0 roll past each other in either direction.
-                    strip.animate([{ transform: transform(from) }, { transform: transform(to) }], options);
-                    animateGear(index, from, to, options);
+                    strip.animate(stepKeyframes(transform, from, to, carried), options);
+                    animateGear(index, from, to, carried, options);
                 }
             });
 

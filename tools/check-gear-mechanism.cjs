@@ -123,10 +123,11 @@ function checkDesign(design, m) {
     });
     // rod body vs windows and foreign ratchet wheels
     design.wheels.forEach((wheel, w) => {
-      const corner = { x: wheel.x - dial.window / 2, y: wheel.y - dial.digitRadius - dial.window / 2 };
-      const box = [corner, { x: corner.x + dial.window, y: corner.y }, { x: corner.x + dial.window, y: corner.y + dial.window }, { x: corner.x, y: corner.y + dial.window }];
+      const { width, height, offset } = dial.window;
+      const corner = { x: wheel.x - width / 2, y: wheel.y - dial.digitRadius + offset - height / 2 };
+      const box = [corner, { x: corner.x + width, y: corner.y }, { x: corner.x + width, y: corner.y + height }, { x: corner.x, y: corner.y + height }];
       const toBox = Math.min(...box.map((c) => segmentDistance(c, end, tip))) - rod.width / 2;
-      const inside = end.x > corner.x && end.x < corner.x + dial.window && end.y > corner.y && end.y < corner.y + dial.window;
+      const inside = end.x > corner.x && end.x < corner.x + width && end.y > corner.y && end.y < corner.y + height;
       note(`Stange ${gap} ↔ Fenster ${w}`, inside ? -1 : toBox);
       if (inside || toBox < 1) faults.push(`Stange ${gap} verdeckt das Fenster von Rad ${w}`);
       if (w !== gap) {

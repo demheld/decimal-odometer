@@ -33,8 +33,10 @@ Unter dem Zählwerk kann eine Seitenansicht der Mechanik eingeblendet werden.
 Sie ist beim Laden ausgeblendet; die runde Taste ⚙ unter ▶ blendet sie ein
 und wieder aus. Aus Platzgründen zeigt sie nur Hunderter, Zehner und Einer;
 das Tausenderrad fehlt nur in dieser Ansicht. Alle Teile bewegen sich
-synchron mit den Zahlenrädern. Ein grünes Sichtfenster oben auf jedem Rad
-rahmt die angezeigte Ziffer ein.
+synchron mit den Zahlenrädern. Die Ansicht hat einen weißen Hintergrund. Ein
+grünes Sichtfenster oben auf jedem Rad rahmt die angezeigte Ziffer ein; es ist
+so groß, dass der Rahmen keine Ziffer berührt, auch nicht die Unterlängen
+der Georgia-Ziffern 3, 4, 5, 7 und 9.
 
 - Jedes Zahlenrad trägt vorne ein blaues Klinkenrad mit 10 schrägen Zähnen,
   also einen Zahn pro Ziffer.

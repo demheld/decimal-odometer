@@ -218,8 +218,8 @@
             box-sizing: border-box;
             border-radius: 14px;
             overflow: hidden;
-            background: linear-gradient(#2a3038, #1b1f25);
-            box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
+            background: #ffffff;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, .08);
             transform-origin: 50% 0;
             animation: gear-open .6s cubic-bezier(.2, .8, .3, 1.15);
         }
@@ -262,7 +262,6 @@
         }
         .rod {
             stroke: #98d982;
-            stroke-width: 6;
             stroke-linecap: round;
             filter: url(#gearShadow);
         }
@@ -273,13 +272,13 @@
             fill: #6fbf5c;
         }
         .guide {
-            fill: #59626d;
-            stroke: #aab3bd;
+            fill: #6b747f;
+            stroke: #4b535c;
             stroke-width: 1;
         }
         .spring {
             fill: none;
-            stroke: #c5ccd4;
+            stroke: #8a939d;
             stroke-width: 1.5;
             vector-effect: non-scaling-stroke;
         }
@@ -290,12 +289,12 @@
         }
         .gear-label {
             font: 14px Arial, sans-serif;
-            fill: #aab3bd;
+            fill: #555;
             text-anchor: middle;
         }
         .carry-badge {
             font: bold 18px Arial, sans-serif;
-            fill: #ffa6e6;
+            fill: #d6189f;
             text-anchor: middle;
             opacity: 0;
         }
@@ -642,12 +641,14 @@
         // below, which tools/check-gear-mechanism.cjs also runs to check the design.
         const gearDesign = {
             wheels: [{ x: 110, y: 210 }, { x: 272, y: 210 }, { x: 434, y: 210 }],
-            dial: { radius: 72, digitRadius: 60, window: 24 },
+            // The window frame (stroke 2.5) is sized to the ink of the Georgia digits (about 13 x 19,
+            // centred slightly below the digit position) plus a small gap, so it never covers a digit.
+            dial: { radius: 72, digitRadius: 60, window: { width: 22, height: 28, offset: 0.5 } },
             ratchet: { root: 25, tip: 35, rise: 31.2, drop: 33.5 },
             cam: { inner: 14, radius: 87, width: 5, angle: 324 },
             rod: {
-                width: 6, tipRadius: 31, tipAngle: -12, aimRadius: 86, aimAngle: -20, length: 149,
-                clearance: 1, returnTime: 0.12, rightGuide: 26, leftGuide: 42, collar: 78
+                width: 4.5, tipRadius: 31, tipAngle: -8, aimRadius: 85, aimAngle: -20, length: 145.5,
+                clearance: 1, returnTime: 0.12, rightGuide: 26, leftGuide: 72, collar: 104
             },
             check: { maxSettle: 1.5 }
         };
@@ -849,8 +850,9 @@
 
         function guide(at, angle, parent) {
             const g = svgElement('g', { transform: `translate(${point(at)}) rotate(${angle.toFixed(2)})` }, parent);
-            svgElement('rect', { x: -6, y: -10, width: 12, height: 5, rx: 1.5, class: 'guide' }, g);
-            svgElement('rect', { x: -6, y: 5, width: 12, height: 5, rx: 1.5, class: 'guide' }, g);
+            const inner = gearDesign.rod.width / 2 + 1;
+            svgElement('rect', { x: -6, y: -inner - 5, width: 12, height: 5, rx: 1.5, class: 'guide' }, g);
+            svgElement('rect', { x: -6, y: inner, width: 12, height: 5, rx: 1.5, class: 'guide' }, g);
         }
 
         function buildGears() {
@@ -860,9 +862,10 @@
             gearDesign.wheels.forEach((center, w) => {
                 const parts = gearParts[shownWheels[w]];
                 parts.wheel = buildWheel(wheels);
-                const { window: size, digitRadius } = gearDesign.dial;
+                const { width, height, offset } = gearDesign.dial.window;
                 svgElement('rect', {
-                    x: center.x - size / 2, y: center.y - digitRadius - size / 2, width: size, height: size, rx: 3, class: 'reading-window'
+                    x: center.x - width / 2, y: center.y - gearDesign.dial.digitRadius + offset - height / 2,
+                    width, height, rx: 3, class: 'reading-window'
                 }, top);
                 const label = svgElement('text', { class: 'gear-label', x: center.x, y: center.y + 100 }, top);
                 label.textContent = placeNames[shownWheels[w]];
@@ -873,13 +876,14 @@
                 parts.glow = svgElement('circle', { cx: g.tip.x, cy: g.tip.y, r: 22, fill: 'url(#carryGlow)', opacity: 0 }, rods);
                 parts.spring = svgElement('g', { class: 'turning' }, rods);
                 let zigzag = 'M0 0';
-                for (let i = 1; i < 14; i++) zigzag += ` L${(springRest * i / 14).toFixed(2)} ${i % 2 ? 6 : -6}`;
+                for (let i = 1; i < 14; i++) zigzag += ` L${(springRest * i / 14).toFixed(2)} ${i % 2 ? 5 : -5}`;
                 svgElement('path', { d: `${zigzag} L${springRest} 0`, class: 'spring' }, parts.spring);
                 parts.rod = svgElement('g', { class: 'turning' }, rods);
-                svgElement('path', { d: `M${point(g.end)} L${point(g.tip)}`, class: 'rod' }, parts.rod);
+                svgElement('path', { d: `M${point(g.end)} L${point(g.tip)}`, class: 'rod', 'stroke-width': gearDesign.rod.width }, parts.rod);
                 svgElement('circle', { cx: g.end.x, cy: g.end.y, r: gearDesign.rod.width / 2 + 0.5, class: 'rod-pin' }, parts.rod);
+                const collarHeight = gearDesign.rod.width + 6;
                 svgElement('rect', {
-                    x: -3, y: -7, width: 6, height: 14, rx: 1.5, class: 'collar',
+                    x: -3, y: -collarHeight / 2, width: 6, height: collarHeight, rx: 1.5, class: 'collar',
                     transform: `translate(${point(g.collar)}) rotate(${angle.toFixed(2)})`
                 }, parts.rod);
                 guide(g.rightGuide, angle, rods);

@@ -7,6 +7,11 @@ sowie eine einblendbare Zahlen-Entdeckerleiste.
 ## Bedienung
 
 - Das Zählwerk zeigt Zahlen von 0 bis 9999. Ein Klick darauf addiert 1.
+- Neben dem Zählwerk startet „Start“ das automatische Zählen: Nach einer
+  Sekunde und anschließend jede Sekunde wird 1 addiert. „Pause“ hält es an.
+  „Zurücksetzen“ stoppt das automatische Zählen und setzt den Wert auf 0.
+  Rechentasten und blauer Punkt bleiben während des Zählens bedienbar.
+  In Hintergrund-Tabs kann der Browser die Zeitabstände verlängern.
 - Die Rechentasten addieren oder subtrahieren den jeweiligen Stellenwert.
 - Würde das Ergebnis negativ, bleibt das Zählwerk bei 0 und spielt einen
   lustigen Ton. Bei Addition über 9999 beginnt es wieder bei 0.
@@ -16,7 +21,9 @@ sowie eine einblendbare Zahlen-Entdeckerleiste.
 - Der blaue Punkt lässt sich mit Maus oder Finger verschieben und ändert
   dabei den Zählerstand. Mit den Pfeiltasten ändert er sich um 1, mit
   Bild auf/ab um 100. Pos1 wählt 0, Ende wählt 9999.
-- Die Entdeckerleiste kann vollständig aus- und wieder eingeblendet werden.
+- Die Entdeckerleiste steht unter dem Zähler und ist beim Laden ausgeblendet.
+  Mit „Entdeckerleiste einblenden“ bzw. „Entdeckerleiste ausblenden“ wird
+  ihre Sichtbarkeit umgeschaltet; der Zählerstand bleibt erhalten.
 - Beispiele zeigen unterschiedliche Einheiten und teilweise angenommene
   Werte, keine allgemeingültigen Messwerte.
 

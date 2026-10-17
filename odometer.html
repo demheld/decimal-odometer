@@ -10,12 +10,15 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             min-height: 100vh;
+            min-height: 100dvh;
             background-color: #f4f6f9;
             margin: 0;
             padding: 24px 16px;
             box-sizing: border-box;
+            touch-action: manipulation;
+            overscroll-behavior: none;
         }
         h1 {
             color: #333;
@@ -30,7 +33,7 @@
         .odometer-container {
             display: flex;
             background: linear-gradient(#505050, #202020 12%, #111 85%, #404040);
-            padding: 18px;
+            padding: var(--odometer-pad);
             border: 2px solid #666;
             border-radius: 12px;
             box-shadow: 0 8px 16px rgba(0,0,0,0.3), inset 0 2px 3px #999;
@@ -39,7 +42,7 @@
         }
         .digit-column {
             position: relative;
-            width: clamp(42px, 12vw, 64px);
+            width: var(--wheel-width);
             height: 96px;
             overflow: hidden;
             background: #eeeae0;
@@ -109,18 +112,19 @@
             outline: 3px solid #0069ff;
             outline-offset: 4px;
         }
+        /* Each label spans one wheel including its 1px borders and 2px margins. */
         .place-labels {
             display: flex;
-            padding: 0 20px;
-            gap: 6px;
+            padding: 0 calc(var(--odometer-pad) + 2px);
             margin: 10px 0 0;
             list-style: none;
             color: #555;
-            font-size: 12px;
+            font-size: clamp(9px, 2.6vw, 12px);
             text-align: center;
         }
         .place-labels li {
-            width: clamp(42px, 12vw, 64px);
+            flex: 0 0 calc(var(--wheel-width) + 6px);
+            white-space: nowrap;
         }
         .explanation {
             margin-top: 20px;
@@ -132,6 +136,9 @@
             padding: 15px;
             border-radius: 6px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            box-sizing: border-box;
+            width: 100%;
+            min-height: 6.5em;
         }
         .learning-layout {
             display: grid;
@@ -149,6 +156,8 @@
             min-width: 0;
         }
         .counter-row {
+            --wheel-width: clamp(40px, 13vw, 64px);
+            --odometer-pad: 18px;
             display: flex;
             align-items: center;
             gap: 12px;
@@ -160,14 +169,21 @@
             align-items: center;
         }
         .play-button {
-            padding: 12px;
+            flex: none;
+            width: 40px;
+            height: 40px;
+            margin-bottom: 26px;
+            padding: 0;
             border: none;
-            border-radius: 8px;
+            border-radius: 50%;
             background: #0069ff;
             color: white;
-            font: bold 16px Arial, sans-serif;
+            font: 16px Arial, sans-serif;
+            line-height: 40px;
             cursor: pointer;
-            min-width: 92px;
+        }
+        .play-button:hover {
+            background: #0051cc;
         }
         .number-panel {
             background: white;
@@ -296,12 +312,9 @@
             .number-panel { padding: 20px; }
         }
         @media (max-width: 400px) {
-            .odometer-container { padding: 10px; }
-            .counter-row { gap: 6px; }
-            .play-button {
-                min-width: 0;
-                padding: 10px 6px;
-                font-size: 14px;
+            .counter-row {
+                --odometer-pad: 10px;
+                gap: 8px;
             }
         }
         @media (prefers-reduced-motion: reduce) {
@@ -331,7 +344,7 @@
     </div>
     <button type="button" class="play-button" id="playBtn" aria-pressed="false"
         aria-label="Automatisches Zählen starten: plus 1 pro Sekunde"
-        title="Plus 1 pro Sekunde"><span aria-hidden="true">&#9654;</span> Start</button>
+        title="Start: plus 1 pro Sekunde"><span aria-hidden="true">&#9654;</span></button>
     </div>
 
     <div class="controls" role="group" aria-label="Addieren">
@@ -592,7 +605,8 @@
         function stopCounting() {
             clearInterval(countingInterval);
             countingInterval = null;
-            playButton.innerHTML = '<span aria-hidden="true">&#9654;</span> Start';
+            playButton.innerHTML = '<span aria-hidden="true">&#9654;</span>';
+            playButton.title = 'Start: plus 1 pro Sekunde';
             playButton.setAttribute('aria-pressed', 'false');
             playButton.setAttribute('aria-label', 'Automatisches Zählen starten: plus 1 pro Sekunde');
         }
@@ -603,7 +617,8 @@
                 return;
             }
             countingInterval = setInterval(() => changeValue(1), 1000);
-            playButton.innerHTML = '<span aria-hidden="true">&#10074;&#10074;</span> Pause';
+            playButton.innerHTML = '<span aria-hidden="true">&#10074;&#10074;</span>';
+            playButton.title = 'Pause';
             playButton.setAttribute('aria-pressed', 'true');
             playButton.setAttribute('aria-label', 'Automatisches Zählen pausieren');
         });

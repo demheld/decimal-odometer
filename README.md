@@ -7,8 +7,9 @@ sowie eine einblendbare Zahlen-Entdeckerleiste.
 ## Bedienung
 
 - Das Zählwerk zeigt Zahlen von 0 bis 9999. Ein Klick darauf addiert 1.
-- Neben dem Zählwerk startet „Start“ das automatische Zählen: Nach einer
-  Sekunde und anschließend jede Sekunde wird 1 addiert. „Pause“ hält es an.
+- Die kleine runde Taste ▶ neben dem Zählwerk startet das automatische
+  Zählen: Nach einer Sekunde und anschließend jede Sekunde wird 1 addiert.
+  Während des Zählens zeigt sie ❚❚ und hält es bei erneutem Tippen an.
   „Zurücksetzen“ stoppt das automatische Zählen und setzt den Wert auf 0.
   Rechentasten und blauer Punkt bleiben während des Zählens bedienbar.
   In Hintergrund-Tabs kann der Browser die Zeitabstände verlängern.

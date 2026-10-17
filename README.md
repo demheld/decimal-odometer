@@ -1,8 +1,8 @@
 # Dezimalsystem-Zählwerk
 
 Eine deutschsprachige Lernseite zum Dezimalsystem: mechanisch animierte
-Zahlenräder, Addition und Subtraktion in Schritten von 1, 10, 100 und 1000
-sowie eine einblendbare Zahlen-Entdeckerleiste.
+Zahlenräder sowie Addition und Subtraktion in Schritten von 1, 10, 100
+und 1000.
 
 ## Bedienung
 
@@ -10,18 +10,34 @@ sowie eine einblendbare Zahlen-Entdeckerleiste.
 - Die kleine runde Taste ▶ neben dem Zählwerk startet das automatische
   Zählen: Nach einer Sekunde und anschließend jede Sekunde wird 1 addiert.
   Während des Zählens zeigt sie ❚❚ und hält es bei erneutem Tippen an.
-  „Zurücksetzen“ stoppt das automatische Zählen und setzt den Wert auf 0.
-  Rechentasten und blauer Punkt bleiben während des Zählens bedienbar.
+  „Zurücksetzen“ stoppt das automatische Zählen, verwirft noch wartende
+  Schritte und setzt den Wert auf 0.
+  Die Rechentasten bleiben während des Zählens bedienbar.
   In Hintergrund-Tabs kann der Browser die Zeitabstände verlängern.
 - Die Rechentasten addieren oder subtrahieren den jeweiligen Stellenwert.
+- Schnelle Klicks gehen nicht verloren und überspringen keine Animation:
+  Sie werden gesammelt und nacheinander ausgeführt, höchstens ein Schritt
+  pro Drehung der Zahlenräder (420 ms).
+- Mit „Schrittweise zählen“ wird jede Rechentaste in Einerschritten mit
+  derselben Geschwindigkeit ausgeführt: +10 zählt also zehnmal +1
+  (etwa 4 Sekunden), +1000 dauert entsprechend rund 7 Minuten.
 - Würde das Ergebnis negativ, bleibt das Zählwerk bei 0 und spielt einen
   lustigen Ton. Bei Addition über 9999 beginnt es wieder bei 0.
+
+### Zahlen-Entdeckerleiste (derzeit ausgeblendet)
+
+Der Code für die Entdeckerleiste ist noch in [odometer.html](./odometer.html)
+enthalten, die Taste „Entdeckerleiste einblenden“ ist aber per `hidden`
+ausgeblendet. Zum Reaktivieren das Attribut `hidden` an der Taste mit
+`id="toggleScaleBtn"` entfernen.
+
 - Die Entdeckerleiste hat eine gleichmäßige und eine logarithmische Skala.
   Bei der logarithmischen Skala wird `log(1 + Zahl)` verwendet, damit auch
   die 0 dargestellt werden kann.
 - Der blaue Punkt lässt sich mit Maus oder Finger verschieben und ändert
-  dabei den Zählerstand. Mit den Pfeiltasten ändert er sich um 1, mit
-  Bild auf/ab um 100. Pos1 wählt 0, Ende wählt 9999.
+  dabei den Zählerstand sofort (wartende Schritte werden verworfen). Mit
+  den Pfeiltasten ändert er sich um 1, mit Bild auf/ab um 100. Pos1 wählt
+  0, Ende wählt 9999.
 - Die Entdeckerleiste steht unter dem Zähler und ist beim Laden ausgeblendet.
   Mit „Entdeckerleiste einblenden“ bzw. „Entdeckerleiste ausblenden“ wird
   ihre Sichtbarkeit umgeschaltet; der Zählerstand bleibt erhalten.
@@ -143,8 +159,8 @@ curl --fail http://localhost:8080/
 docker logs decimal-odometer
 ```
 
-Zusätzlich im Browser Rechentasten, Punktverschiebung, Skalenwechsel und
-Aus-/Einblenden prüfen. Der Ton benötigt eine Benutzerinteraktion und
+Zusätzlich im Browser Rechentasten, schnelle Mehrfachklicks und
+„Schrittweise zählen“ prüfen. Der Ton benötigt eine Benutzerinteraktion und
 funktionierende Audioausgabe im Browser.
 
 ### Hinter einem bestehenden Webserver

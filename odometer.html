@@ -108,6 +108,29 @@
             background-color: #ffc3ff;
             box-shadow: inset 0 0 0 2px #0069ff;
         }
+        .controls .outline {
+            background-color: transparent;
+            color: #0069ff;
+            border: 1pt solid #0069ff;
+        }
+        .controls .outline:hover {
+            background-color: rgba(0, 105, 255, .08);
+        }
+        .smooth-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #333;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .smooth-toggle input {
+            width: 18px;
+            height: 18px;
+            margin: 0;
+            accent-color: #0069ff;
+            cursor: pointer;
+        }
         button:focus-visible {
             outline: 3px solid #0069ff;
             outline-offset: 4px;
@@ -346,8 +369,9 @@
         <button class="subtract" data-change="-1000">-1000</button>
     </div>
     <div class="controls">
-        <button id="resetBtn">Zurücksetzen</button>
-        <button id="toggleScaleBtn" aria-controls="numberPanel" aria-expanded="false">Entdeckerleiste einblenden</button>
+        <button id="resetBtn" class="outline">Zurücksetzen</button>
+        <label class="smooth-toggle"><input type="checkbox" id="smoothCounting"> Schrittweise zählen</label>
+        <button id="toggleScaleBtn" aria-controls="numberPanel" aria-expanded="false" hidden>Entdeckerleiste einblenden</button>
     </div>
     </section>
 
@@ -397,6 +421,7 @@
         const maxValue = 9999;
         const ids = ['thousands', 'hundreds', 'tens', 'units'];
         const digitHeight = 64;
+        const stepDuration = 420;
         let audioContext;
         const scaleMode = document.getElementById('scaleMode');
         const scaleHeight = 560;
@@ -424,6 +449,7 @@
         }
 
         function setScaleValue(value) {
+            clearPendingChanges();
             currentValue = Math.max(0, Math.min(maxValue, value));
             updateDisplay();
         }
@@ -503,7 +529,7 @@
                     strip.animate([
                         { transform: transform(10 + previousDigit) },
                         { transform: transform(10 + previousDigit + distance) }
-                    ], { duration: 420, easing: 'ease-in-out' });
+                    ], { duration: stepDuration, easing: 'ease-in-out' });
                 }
             });
 
@@ -553,6 +579,44 @@
             updateDisplay(previousValue, Math.sign(amount));
         }
 
+        // Clicks are queued so the wheels never move faster than one roll animation per step.
+        const pendingChanges = [];
+        let stepTimer = null;
+        const smoothCounting = document.getElementById('smoothCounting');
+
+        function queueChange(amount) {
+            const smooth = smoothCounting.checked;
+            pendingChanges.push({
+                step: smooth ? Math.sign(amount) : amount,
+                count: smooth ? Math.abs(amount) : 1
+            });
+            if (stepTimer === null) {
+                processNextChange();
+            }
+        }
+
+        function processNextChange() {
+            const change = pendingChanges[0];
+            if (!change) {
+                stepTimer = null;
+                return;
+            }
+            const hitsZero = currentValue + change.step < 0;
+            changeValue(change.step);
+            change.count--;
+            if (hitsZero || change.count === 0) {
+                pendingChanges.shift();
+            }
+            const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            stepTimer = setTimeout(processNextChange, reducedMotion ? 0 : stepDuration);
+        }
+
+        function clearPendingChanges() {
+            pendingChanges.length = 0;
+            clearTimeout(stepTimer);
+            stepTimer = null;
+        }
+
         let countingInterval = null;
         const playButton = document.getElementById('playBtn');
 
@@ -570,7 +634,7 @@
                 stopCounting();
                 return;
             }
-            countingInterval = setInterval(() => changeValue(1), 1000);
+            countingInterval = setInterval(() => queueChange(1), 1000);
             playButton.innerHTML = '<span aria-hidden="true">&#10074;&#10074;</span>';
             playButton.title = 'Pause';
             playButton.setAttribute('aria-pressed', 'true');
@@ -579,13 +643,14 @@
 
         function reset() {
             stopCounting();
+            clearPendingChanges();
             currentValue = 0;
             updateDisplay();
         }
 
-        document.getElementById('odometer').addEventListener('click', () => changeValue(1));
+        document.getElementById('odometer').addEventListener('click', () => queueChange(1));
         document.querySelectorAll('[data-change]').forEach(button => {
-            button.addEventListener('click', () => changeValue(Number(button.dataset.change)));
+            button.addEventListener('click', () => queueChange(Number(button.dataset.change)));
         });
         document.getElementById('resetBtn').addEventListener('click', reset);
         scaleMode.addEventListener('change', renderScale);

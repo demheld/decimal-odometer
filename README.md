@@ -27,6 +27,23 @@ und 1000.
 - Würde das Ergebnis negativ, bleibt das Zählwerk bei 0 und spielt einen
   lustigen Ton. Bei Addition über 9999 beginnt es wieder bei 0.
 
+### Blick ins Getriebe
+
+Unter dem Zählwerk zeigt eine Seitenansicht die Mechanik dahinter. Die
+runde Taste ⚙ neben ▶ blendet sie aus und wieder ein. Die Zahnräder drehen
+sich synchron mit den Zahlenrädern:
+
+- Jedes Zahlenrad hat einen Zahnkranz und genau einen rosa Mitnehmer.
+- Zwischen zwei Rädern sitzt ein kleines Zwischenrad. Es greift immer in
+  den Zahnkranz des linken (höheren) Rades.
+- Der Mitnehmer des rechten Rades erreicht das Zwischenrad nur beim
+  Schritt von 9 auf 0. Dann schiebt er es eine Vierteldrehung weiter, und
+  das linke Rad dreht sich um genau eine Ziffer: 10 Einer werden zu
+  1 Zehner. Das Zwischenrad leuchtet dabei rosa und zeigt „+1“.
+- Beim Rückwärtszählen von 0 auf 9 läuft derselbe Vorgang rückwärts und
+  zeigt „−1“.
+- Bei 9999 + 1 gibt es kein fünftes Rad; das Zählwerk beginnt bei 0.
+
 ### Zahlen-Entdeckerleiste (derzeit ausgeblendet)
 
 Der Code für die Entdeckerleiste ist noch in [odometer.html](./odometer.html)

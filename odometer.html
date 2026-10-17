@@ -177,11 +177,16 @@
             flex-direction: column;
             align-items: center;
         }
+        .side-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 26px;
+        }
         .play-button {
             flex: none;
             width: 40px;
             height: 40px;
-            margin-bottom: 26px;
             padding: 0;
             border: none;
             border-radius: 50%;
@@ -193,6 +198,59 @@
         }
         .play-button:hover {
             background: #0051cc;
+        }
+        .play-button.gear-button {
+            background: transparent;
+            color: #0069ff;
+            border: 1pt solid #0069ff;
+            font-size: 20px;
+        }
+        .play-button.gear-button:hover,
+        .play-button.gear-button[aria-pressed="true"] {
+            background: rgba(0, 105, 255, .1);
+        }
+        .gear-view {
+            width: min(100%, 520px);
+            margin: 16px 0 4px;
+            padding: 6px 4px 0;
+            box-sizing: border-box;
+            border-radius: 14px;
+            background: radial-gradient(ellipse at 50% 0%, #ffffff, #e3e8f0 80%);
+            box-shadow: inset 0 2px 6px rgba(0, 0, 0, .12), 0 4px 14px rgba(0, 0, 0, .06);
+            transform-origin: 50% 0;
+            animation: gear-open .6s cubic-bezier(.2, .8, .3, 1.15);
+        }
+        .gear-view[hidden] {
+            display: none;
+        }
+        .gear-view svg {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+        .gear-view .turning {
+            transform-origin: 0 0;
+        }
+        .gear-digit {
+            font: bold 15px Arial, sans-serif;
+            fill: #222;
+            text-anchor: middle;
+            dominant-baseline: central;
+        }
+        .gear-label {
+            font: 13px Arial, sans-serif;
+            fill: #555;
+            text-anchor: middle;
+        }
+        .carry-badge {
+            font: bold 18px Arial, sans-serif;
+            fill: #d6189f;
+            text-anchor: middle;
+            opacity: 0;
+        }
+        @keyframes gear-open {
+            from { transform: perspective(700px) rotateX(-85deg); opacity: 0; }
+            to { transform: none; opacity: 1; }
         }
         .number-panel {
             background: white;
@@ -328,6 +386,7 @@
         }
         @media (prefers-reduced-motion: reduce) {
             .scale-marker { transition: none; }
+            .gear-view { animation: none; }
         }
     </style>
 </head>
@@ -351,10 +410,35 @@
         <li>Tausender</li><li>Hunderter</li><li>Zehner</li><li>Einer</li>
     </ul>
     </div>
+    <div class="side-buttons">
     <button type="button" class="play-button" id="playBtn" aria-pressed="false"
         aria-label="Automatisches Zählen starten: plus 1 pro Sekunde"
         title="Start: plus 1 pro Sekunde"><span aria-hidden="true">&#9654;</span></button>
+    <button type="button" class="play-button gear-button" id="gearBtn" aria-pressed="true"
+        aria-controls="gearView" aria-label="Getriebe ausblenden"
+        title="Getriebe ausblenden"><span aria-hidden="true">&#9881;&#xFE0E;</span></button>
     </div>
+    </div>
+
+    <figure class="gear-view" id="gearView" aria-label="Blick ins Getriebe: Beim Schritt von 9 auf 0 schiebt der rosa Mitnehmer das Zwischenrad an und dreht das nächste Rad um eine Ziffer weiter.">
+        <svg id="gearSvg" viewBox="0 0 600 182" aria-hidden="true">
+            <defs>
+                <radialGradient id="discMetal" cx="38%" cy="32%" r="75%">
+                    <stop offset="0" stop-color="#ffffff"/>
+                    <stop offset=".55" stop-color="#e2ded3"/>
+                    <stop offset="1" stop-color="#a8a393"/>
+                </radialGradient>
+                <radialGradient id="pinionMetal" cx="35%" cy="30%" r="80%">
+                    <stop offset="0" stop-color="#ffffff"/>
+                    <stop offset="1" stop-color="#7d8794"/>
+                </radialGradient>
+                <radialGradient id="carryGlow">
+                    <stop offset="0" stop-color="#ff5fd2" stop-opacity=".9"/>
+                    <stop offset="1" stop-color="#ff5fd2" stop-opacity="0"/>
+                </radialGradient>
+            </defs>
+        </svg>
+    </figure>
 
     <div class="controls" role="group" aria-label="Addieren">
         <button id="incrementBtn" data-change="1">+1</button>
@@ -509,9 +593,140 @@
             });
         }
 
+        // Side view of the counting mechanism. Each wheel carries one pink carry tooth; during
+        // its step from 9 to 0 the tooth pushes the intermediate gear, which is always meshed
+        // with the next higher wheel and turns it by exactly one digit (36°).
+        const svgNs = 'http://www.w3.org/2000/svg';
+        const gearSvg = document.getElementById('gearSvg');
+        const gearCenters = ids.map((_, index) => ({ x: 75 + index * 150, y: 86 }));
+        const pinionOffset = { x: 68, y: -42 };
+        const pinionBaseAngle = 72;
+        const carryToothAngle = 279;
+        const placeNames = ['Tausender', 'Hunderter', 'Zehner', 'Einer'];
+        const gearParts = ids.map(() => ({ turning: [], pinion: null, glow: null, badge: null }));
+
+        function svgElement(name, attributes, parent) {
+            const element = document.createElementNS(svgNs, name);
+            Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, value));
+            parent.appendChild(element);
+            return element;
+        }
+
+        function buildGears() {
+            gearCenters.forEach(({ x, y }) => {
+                svgElement('circle', { cx: x + 5, cy: y + 7, r: 61, fill: '#8f8a7c', opacity: '.45' }, gearSvg);
+            });
+            gearCenters.forEach(({ x, y }, index) => {
+                const disc = svgElement('g', { class: 'turning' }, gearSvg);
+                for (let digit = 0; digit < 10; digit++) {
+                    svgElement('path', {
+                        d: 'M-5 -52 L-3 -62 L3 -62 L5 -52 Z', fill: '#9b9686',
+                        transform: `rotate(${digit * 36 + 18})`
+                    }, disc);
+                }
+                svgElement('circle', { r: 55, fill: 'url(#discMetal)', stroke: '#6f6a5c', 'stroke-width': 1.5 }, disc);
+                svgElement('circle', { r: 28, fill: 'none', stroke: '#b9b4a4', 'stroke-width': 1 }, disc);
+                for (let digit = 0; digit < 10; digit++) {
+                    const label = svgElement('text', {
+                        class: 'gear-digit', x: 0, y: -41, transform: `rotate(${digit * 36})`
+                    }, disc);
+                    label.textContent = digit;
+                }
+                svgElement('circle', { r: 9, fill: '#3b3b3b' }, disc);
+                svgElement('circle', { cx: -2, cy: -2, r: 3, fill: '#9a9a9a' }, disc);
+                gearParts[index].turning.push(disc);
+                const label = svgElement('text', { class: 'gear-label', x, y: y + 88 }, gearSvg);
+                label.textContent = placeNames[index];
+            });
+            gearCenters.slice(0, -1).forEach(({ x, y }, index) => {
+                const cx = x + pinionOffset.x;
+                const cy = y + pinionOffset.y;
+                gearParts[index].glow = svgElement('circle', { cx, cy, r: 34, fill: 'url(#carryGlow)', opacity: 0 }, gearSvg);
+                svgElement('circle', { cx: cx + 3, cy: cy + 4, r: 13, fill: '#8f8a7c', opacity: '.45' }, gearSvg);
+                const pinion = svgElement('g', { class: 'turning' }, gearSvg);
+                for (let arm = 0; arm < 4; arm++) {
+                    svgElement('rect', {
+                        x: -4, y: -23, width: 8, height: 23, rx: 3,
+                        fill: 'url(#pinionMetal)', stroke: '#4d5560', 'stroke-width': 1,
+                        transform: `rotate(${arm * 90})`
+                    }, pinion);
+                }
+                svgElement('circle', { r: 9, fill: 'url(#pinionMetal)', stroke: '#4d5560', 'stroke-width': 1 }, pinion);
+                svgElement('circle', { r: 3, fill: '#3b3b3b' }, pinion);
+                gearParts[index].pinion = pinion;
+                gearParts[index].badge = svgElement('text', { class: 'carry-badge', x: cx, y: cy - 30 }, gearSvg);
+            });
+            // Carry teeth are drawn last so they stay visible on top of the intermediate gears.
+            gearCenters.forEach(({ x, y }, index) => {
+                const tooth = svgElement('g', { class: 'turning' }, gearSvg);
+                svgElement('path', {
+                    d: 'M-7 -48 L-4 -76 L4 -76 L7 -48 Z', fill: '#ff5fd2', stroke: '#b0128a',
+                    'stroke-width': 1.5, 'stroke-linejoin': 'round', transform: `rotate(${carryToothAngle})`
+                }, tooth);
+                gearParts[index].turning.push(tooth);
+                svgElement('path', { d: `M${x - 7} ${y - 80} L${x + 7} ${y - 80} L${x} ${y - 68} Z`, fill: '#0069ff' }, gearSvg);
+            });
+        }
+
+        // Wheel positions use the same scale as the digit strips: position 10 + digit.
+        function discTransform(index, position) {
+            const { x, y } = gearCenters[index];
+            return `translate(${x}px, ${y}px) rotate(${-position * 36}deg)`;
+        }
+
+        function pinionTransform(index, position) {
+            const { x, y } = gearCenters[index];
+            return `translate(${x + pinionOffset.x}px, ${y + pinionOffset.y}px) rotate(${pinionBaseAngle + position * 90}deg)`;
+        }
+
+        function gearElements(index) {
+            const parts = gearParts[index];
+            return parts.pinion ? [...parts.turning, parts.pinion] : parts.turning;
+        }
+
+        function setGearPosition(index, position) {
+            gearElements(index).forEach(element => {
+                element.getAnimations().forEach(animation => animation.cancel());
+            });
+            gearParts[index].turning.forEach(element => {
+                element.style.transform = discTransform(index, position);
+            });
+            if (gearParts[index].pinion) {
+                gearParts[index].pinion.style.transform = pinionTransform(index, position);
+            }
+        }
+
+        function animateGear(index, from, to, options) {
+            gearParts[index].turning.forEach(element => {
+                element.animate([
+                    { transform: discTransform(index, from) },
+                    { transform: discTransform(index, to) }
+                ], options);
+            });
+            if (gearParts[index].pinion) {
+                gearParts[index].pinion.animate([
+                    { transform: pinionTransform(index, from) },
+                    { transform: pinionTransform(index, to) }
+                ], options);
+            }
+        }
+
+        function flashCarry(index, direction) {
+            const { glow, badge } = gearParts[index];
+            if (!glow) return;
+            glow.animate([{ opacity: 0 }, { opacity: 1, offset: .35 }, { opacity: 0 }], { duration: stepDuration * 2.5 });
+            badge.textContent = direction > 0 ? '+1' : '−1';
+            badge.animate([
+                { opacity: 0, transform: 'translateY(8px)' },
+                { opacity: 1, transform: 'translateY(0)', offset: .3 },
+                { opacity: 0, transform: 'translateY(-10px)' }
+            ], { duration: stepDuration * 2.5 });
+        }
+
         function updateDisplay(previousValue = currentValue, direction = 0, easing = 'ease-in-out') {
             const valStr = String(currentValue).padStart(maxDigits, '0');
             const previousStr = String(previousValue).padStart(maxDigits, '0');
+            const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
             const changedIndexes = ids.map((_, index) => valStr[index] !== previousStr[index]);
             const leadingIndex = changedIndexes.lastIndexOf(true);
@@ -523,19 +738,33 @@
                 strip.getAnimations().forEach(animation => animation.cancel());
                 const transform = position => `translateY(-${position * digitHeight}px)`;
                 strip.style.transform = transform(10 + digit);
-                if (direction !== 0 && digit !== previousDigit &&
-                    !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                setGearPosition(index, 10 + digit);
+                if (direction !== 0 && digit !== previousDigit && !reducedMotion) {
                     const distance = direction > 0
                         ? (digit - previousDigit + 10) % 10
                         : -((previousDigit - digit + 10) % 10);
-                    // The repeated digits let 9 and 0 roll past each other in either direction.
+                    const from = 10 + previousDigit;
+                    const to = from + distance;
                     // Only the wheel that moves every step follows the run's easing; carry wheels roll softly.
-                    strip.animate([
-                        { transform: transform(10 + previousDigit) },
-                        { transform: transform(10 + previousDigit + distance) }
-                    ], { duration: stepDuration, easing: index === leadingIndex ? easing : 'ease-in-out' });
+                    const options = {
+                        duration: stepDuration,
+                        easing: index === leadingIndex ? easing : 'ease-in-out'
+                    };
+                    // The repeated digits let 9 and 0 roll past each other in either direction.
+                    strip.animate([{ transform: transform(from) }, { transform: transform(to) }], options);
+                    animateGear(index, from, to, options);
                 }
             });
+
+            if (direction !== 0 && !reducedMotion) {
+                const [carryFrom, carryTo] = direction > 0 ? ['9', '0'] : ['0', '9'];
+                for (let index = 0; index < leadingIndex; index++) {
+                    if (changedIndexes[index] &&
+                        previousStr[index + 1] === carryFrom && valStr[index + 1] === carryTo) {
+                        flashCarry(index, direction);
+                    }
+                }
+            }
 
             document.getElementById('odometer').setAttribute(
                 'aria-label', `Aktueller Zählerstand: ${currentValue}. Klicken, um 1 zu addieren.`
@@ -726,7 +955,18 @@
                 ? 'Entdeckerleiste einblenden' : 'Entdeckerleiste ausblenden';
         });
 
+        const gearButton = document.getElementById('gearBtn');
+        gearButton.addEventListener('click', () => {
+            const gearView = document.getElementById('gearView');
+            gearView.hidden = !gearView.hidden;
+            const label = gearView.hidden ? 'Getriebe einblenden' : 'Getriebe ausblenden';
+            gearButton.setAttribute('aria-pressed', String(!gearView.hidden));
+            gearButton.setAttribute('aria-label', label);
+            gearButton.title = label;
+        });
+
         initStrips();
+        buildGears();
         renderScale();
         updateDisplay();
     </script>

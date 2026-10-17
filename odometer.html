@@ -116,6 +116,11 @@
         .controls .outline:hover {
             background-color: rgba(0, 105, 255, .08);
         }
+        /* "+" is wider than "-": the same minimum width per place value keeps each blue/pink pair the same size. */
+        .controls [data-change="1"], .controls [data-change="-1"] { min-width: 3.7em; }
+        .controls [data-change="10"], .controls [data-change="-10"] { min-width: 4.25em; }
+        .controls [data-change="100"], .controls [data-change="-100"] { min-width: 4.8em; }
+        .controls [data-change="1000"], .controls [data-change="-1000"] { min-width: 5.35em; }
         .smooth-toggle {
             display: flex;
             align-items: center;
@@ -261,15 +266,15 @@
             fill: #20252c;
         }
         .rod {
-            stroke: #98d982;
+            stroke: #a9b1ba;
             stroke-linecap: round;
             filter: url(#gearShadow);
         }
         .rod-pin {
-            fill: #6fbf5c;
+            fill: #8a939d;
         }
         .collar {
-            fill: #6fbf5c;
+            fill: #8a939d;
         }
         .guide {
             fill: #6b747f;
@@ -284,7 +289,7 @@
         }
         .reading-window {
             fill: none;
-            stroke: #8fd97f;
+            stroke: #e53935;
             stroke-width: 2.5;
         }
         .gear-label {
@@ -433,6 +438,8 @@
                 --odometer-pad: 10px;
                 --side-gap: 8px;
             }
+            .controls { gap: 6px; }
+            .controls button[data-change] { font-size: 15px; padding: 10px 12px; }
         }
         @media (prefers-reduced-motion: reduce) {
             .scale-marker { transition: none; }

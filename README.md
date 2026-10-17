@@ -14,7 +14,9 @@ und 1000.
   Schritte und setzt den Wert auf 0.
   Die Rechentasten bleiben während des Zählens bedienbar.
   In Hintergrund-Tabs kann der Browser die Zeitabstände verlängern.
-- Die Rechentasten addieren oder subtrahieren den jeweiligen Stellenwert.
+- Die Rechentasten addieren (blau) oder subtrahieren (rosa) den jeweiligen
+  Stellenwert. Die blaue und die rosa Taste eines Stellenwerts sind gleich
+  breit, sodass beide Reihen übereinander ausgerichtet sind.
 - Schnelle Klicks gehen nicht verloren und überspringen keine Animation:
   Sie werden gesammelt und nacheinander ausgeführt, höchstens ein Schritt
   pro Drehung der Zahlenräder (420 ms).
@@ -35,7 +37,7 @@ und wieder aus. Aus Platzgründen zeigt sie nur Hunderter, Zehner und Einer;
 das Tausenderrad fehlt nur in dieser Ansicht. Alle Teile bewegen sich
 synchron mit den Zahlenrädern. Die Ansicht hat keinen eigenen Hintergrund,
 sondern dieselbe Farbe wie die übrige Seite. Ein
-grünes Sichtfenster oben auf jedem Rad rahmt die angezeigte Ziffer ein; es ist
+rotes Sichtfenster oben auf jedem Rad rahmt die angezeigte Ziffer ein; es ist
 so groß, dass der Rahmen keine Ziffer berührt, auch nicht die Unterlängen
 der Georgia-Ziffern 3, 4, 5, 7 und 9.
 
@@ -44,7 +46,7 @@ der Georgia-Ziffern 3, 4, 5, 7 und 9.
 - Hinter jedem Zahlenrad sitzt ein rosa Nocken genau auf der 9; die 9 ist
   ebenfalls rosa. Steht die 9 im Fenster, zeigt der Nocken senkrecht nach
   oben und ragt über den Rand des Zifferblatts hinaus.
-- Zwischen zwei Rädern liegt eine gerade grüne Stange in zwei festen
+- Zwischen zwei Rädern liegt eine gerade graue Stange in zwei festen
   Führungen. Ihre Spitze sitzt in einer Kerbe des linken (höheren)
   Klinkenrads, ihr rechtes Ende liegt im Weg des Nockens des rechten Rades.
 - Beim Schritt von 9 auf 0 schiebt der Nocken die Stange zur Seite. Die

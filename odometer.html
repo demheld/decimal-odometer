@@ -212,7 +212,7 @@
             background: rgba(0, 105, 255, .1);
         }
         .gear-view {
-            width: min(100%, 520px);
+            width: min(100%, 600px);
             margin: 16px 0 4px;
             padding: 6px 4px 0;
             box-sizing: border-box;
@@ -234,10 +234,42 @@
             transform-origin: 0 0;
         }
         .gear-digit {
-            font: bold 15px Arial, sans-serif;
+            font: bold 22px Arial, sans-serif;
             fill: #222;
             text-anchor: middle;
             dominant-baseline: central;
+        }
+        .gear-digit.carry-digit {
+            fill: #d6189f;
+        }
+        .pin {
+            fill: #6b737d;
+            stroke: #3f454c;
+            stroke-width: .8;
+        }
+        .pin-flange {
+            fill: none;
+            stroke: #ebe6da;
+        }
+        .finger-arm {
+            fill: none;
+            stroke: #ff5fd2;
+            stroke-width: 3.5;
+            stroke-linecap: round;
+        }
+        .finger-pin {
+            fill: #ff5fd2;
+            stroke: #b0128a;
+            stroke-width: 1;
+        }
+        .star-fork {
+            fill: none;
+            stroke: #6f7984;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .plane-back {
+            filter: brightness(.82);
         }
         .gear-label {
             font: 13px Arial, sans-serif;
@@ -421,8 +453,8 @@
     </div>
     </div>
 
-    <figure class="gear-view" id="gearView" hidden aria-label="Blick ins Getriebe: Beim Schritt von 9 auf 0 schiebt der rosa Mitnehmer das Zwischenrad an und dreht das nächste Rad um eine Ziffer weiter.">
-        <svg id="gearSvg" viewBox="0 0 540 210" aria-hidden="true">
+    <figure class="gear-view" id="gearView" hidden aria-label="Blick ins Getriebe: Beim Schritt von 9 auf 0 greift der rosa Finger in das kleine Sternrad, und das Sternrad dreht das nächste Zahlenrad um eine Ziffer weiter.">
+            <svg id="gearSvg" viewBox="0 46 607 234" aria-hidden="true">
             <defs>
                 <radialGradient id="discMetal" cx="38%" cy="32%" r="75%">
                     <stop offset="0" stop-color="#ffffff"/>
@@ -600,19 +632,36 @@
             });
         }
 
-        // Side view of the counting mechanism. Each wheel carries one pink carry tooth exactly at
-        // its 9. During the step from 9 to 0 the tooth swings up-left into the intermediate gear,
-        // which is always meshed with the next higher wheel and turns it by one digit (36°).
+        // Side view of the counting mechanism for Hunderter, Zehner and Einer (the Tausender wheel is
+        // left out for space). Every big number wheel carries a ring of 20 small pins and a thin pink
+        // arm with two finger pins. Between two wheels sits a slim star wheel with 5 forked spokes whose
+        // slots always hold pins of the wheel to its left. Only during the step from 9 to 0 do the
+        // finger pins of the right wheel enter the slots: they turn the star by two spokes (144°) and the
+        // star moves the left wheel by two pins = one digit (36°). Like in a real odometer the parts lie
+        // in two planes (front/back), so a finger only reaches its own star.
+        // `node tools/check-gear-mechanism.cjs` checks gearDesign for collisions; with `--curves` it
+        // prints gearCurves (progress of the carried wheel and of the stars over a step, 0..1).
+        const gearDesign = {
+            wheels: [{ x: 110, y: 150 }, { x: 303.42, y: 150 }, { x: 496.84, y: 150 }],
+            stars: [{ x: 198.49, y: 118.78, angle: 286.57 }, { x: 391.91, y: 118.78, angle: 286.57 }],
+            disc: { radius: 70 },
+            pins: { count: 20, radius: 78, size: 2.4, angle: 79.57 },
+            finger: { radius: 93.48, size: 2.4, angles: [261.07, 276.07] },
+            star: { spokes: 5, radius: 20.26, root: 12.83, slot: 5, tine: 1.8, hub: 4 },
+            check: { maxSettle: 1.5 }
+        };
+        const gearCurves = {
+            carryWheel: [0, 0, 0, 0.0423, 0.0944, 0.1464, 0.1971, 0.2465, 0.2972, 0.3479, 0.3972, 0.4465, 0.4874, 0.5493, 0.6015, 0.6535, 0.7042, 0.7536, 0.8043, 0.855, 0.9043, 0.9536, 0.993, 1, 1],
+            carryStar: [0, 0, 0, 0.0327, 0.0781, 0.13, 0.1866, 0.2454, 0.3079, 0.3654, 0.4159, 0.4602, 0.4927, 0.5348, 0.5802, 0.6322, 0.6887, 0.7475, 0.81, 0.8675, 0.9181, 0.9623, 0.9938, 1, 1],
+            followStar: [0, 0.0259, 0.061, 0.1017, 0.1479, 0.197, 0.2478, 0.2986, 0.3491, 0.395, 0.4353, 0.4697, 0.4953, 0.5307, 0.5657, 0.6064, 0.6526, 0.7017, 0.7526, 0.8034, 0.8538, 0.8998, 0.94, 0.9745, 1]
+        };
         const svgNs = 'http://www.w3.org/2000/svg';
         const gearSvg = document.getElementById('gearSvg');
-        const gearCenters = ids.map((_, index) => ({ x: 75 + index * 130, y: 112 }));
-        const pinionOffset = { x: 65, y: -53 };
-        const pinionBaseAngle = 45;
-        const carryToothAngle = 9 * 36;
-        // Carried wheels wait until the tooth reaches the intermediate gear, then turn.
-        const carryStart = 0.5;
+        // ids indexes of the wheels in the side view; gearDesign.wheels[w] belongs to shownWheels[w].
+        const shownWheels = [1, 2, 3];
         const placeNames = ['Tausender', 'Hunderter', 'Zehner', 'Einer'];
-        const gearParts = ids.map(() => ({ turning: [], pinion: null, glow: null, badge: null }));
+        // Per ids index: turning wheel groups, the star to the right (holds this wheel's pins), glow.
+        const gearParts = ids.map(() => ({ wheel: [], star: null, glow: null, badge: null }));
 
         function svgElement(name, attributes, parent) {
             const element = document.createElementNS(svgNs, name);
@@ -621,110 +670,173 @@
             return element;
         }
 
-        function buildGears() {
-            // Carry teeth sit one layer behind the wheels so the digits stay fully visible.
-            gearCenters.forEach((_, index) => {
-                const tooth = svgElement('g', { class: 'turning' }, gearSvg);
+        // Angles are measured clockwise from "up", like CSS rotate() in the SVG.
+        function polar({ x, y }, radius, angle) {
+            const radians = angle * Math.PI / 180;
+            return { x: x + radius * Math.sin(radians), y: y - radius * Math.cos(radians) };
+        }
+
+        function point(radius, angle) {
+            const { x, y } = polar({ x: 0, y: 0 }, radius, angle);
+            return `${x.toFixed(2)} ${y.toFixed(2)}`;
+        }
+
+        function buildWheelPins(parent) {
+            const { pins } = gearDesign;
+            const group = svgElement('g', { class: 'turning' }, parent);
+            for (let pin = 0; pin < pins.count; pin++) {
+                const { x, y } = polar({ x: 0, y: 0 }, pins.radius, pins.angle + pin * 360 / pins.count);
+                svgElement('circle', { cx: x.toFixed(2), cy: y.toFixed(2), r: pins.size, class: 'pin' }, group);
+            }
+            return group;
+        }
+
+        function buildWheelDisc(parent) {
+            const { disc, finger } = gearDesign;
+            const group = svgElement('g', { class: 'turning' }, parent);
+            const [first, last] = finger.angles;
+            const middle = (first + last) / 2;
+            svgElement('path', {
+                d: `M${point(disc.radius - 10, middle)} L${point(finger.radius, middle)} ` +
+                    `M${point(finger.radius, first)} A${finger.radius} ${finger.radius} 0 0 1 ${point(finger.radius, last)}`,
+                class: 'finger-arm'
+            }, group);
+            svgElement('circle', { r: disc.radius, fill: 'url(#discMetal)', stroke: '#6f6a5c', 'stroke-width': 1.5 }, group);
+            svgElement('circle', { r: 30, fill: 'none', stroke: '#b9b4a4', 'stroke-width': 1 }, group);
+            for (let digit = 0; digit < 10; digit++) {
+                const label = svgElement('text', {
+                    class: digit === 9 ? 'gear-digit carry-digit' : 'gear-digit', x: 0, y: -54, transform: `rotate(${digit * 36})`
+                }, group);
+                label.textContent = digit;
+            }
+            // The arm runs on the disc face from inside the rim out to the finger pins.
+            svgElement('path', { d: `M${point(disc.radius - 10, middle)} L${point(disc.radius, middle)}`, class: 'finger-arm' }, group);
+            finger.angles.forEach(angle => {
+                const { x, y } = polar({ x: 0, y: 0 }, finger.radius, angle);
+                svgElement('circle', { cx: x.toFixed(2), cy: y.toFixed(2), r: finger.size, class: 'finger-pin' }, group);
+            });
+            svgElement('circle', { r: 9, fill: '#3b3b3b' }, group);
+            svgElement('circle', { cx: -2, cy: -2, r: 2.5, fill: '#9a9a9a' }, group);
+            return group;
+        }
+
+        function buildStar({ angle }, parent) {
+            const { star } = gearDesign;
+            const group = svgElement('g', { class: 'turning' }, parent);
+            const offset = (star.slot + star.tine) / 2;
+            const bottom = star.root - star.tine / 2;
+            const tip = star.radius - star.tine / 2;
+            // Drawn slimmer than the checked fork outline (stem as wide as the fork), never wider.
+            for (let spoke = 0; spoke < star.spokes; spoke++) {
                 svgElement('path', {
-                    d: 'M-7 -48 L-4 -76 L4 -76 L7 -48 Z', fill: '#ff5fd2', stroke: '#b0128a',
-                    'stroke-width': 1.5, 'stroke-linejoin': 'round', transform: `rotate(${carryToothAngle})`
-                }, tooth);
-                gearParts[index].turning.push(tooth);
-            });
-            gearCenters.forEach(({ x, y }, index) => {
-                const disc = svgElement('g', { class: 'turning' }, gearSvg);
-                for (let digit = 0; digit < 10; digit++) {
-                    svgElement('path', {
-                        d: 'M-5 -52 L-3 -62 L3 -62 L5 -52 Z', fill: '#9b9686',
-                        transform: `rotate(${digit * 36 + 18})`
-                    }, disc);
-                }
-                svgElement('circle', { r: 55, fill: 'url(#discMetal)', stroke: '#6f6a5c', 'stroke-width': 1.5 }, disc);
-                svgElement('circle', { r: 28, fill: 'none', stroke: '#b9b4a4', 'stroke-width': 1 }, disc);
-                for (let digit = 0; digit < 10; digit++) {
-                    const label = svgElement('text', {
-                        class: 'gear-digit', x: 0, y: -41, transform: `rotate(${digit * 36})`
-                    }, disc);
-                    label.textContent = digit;
-                }
-                svgElement('circle', { r: 9, fill: '#3b3b3b' }, disc);
-                svgElement('circle', { cx: -2, cy: -2, r: 3, fill: '#9a9a9a' }, disc);
-                gearParts[index].turning.push(disc);
-                const label = svgElement('text', { class: 'gear-label', x, y: y + 88 }, gearSvg);
-                label.textContent = placeNames[index];
-            });
-            gearCenters.slice(0, -1).forEach(({ x, y }, index) => {
-                const cx = x + pinionOffset.x;
-                const cy = y + pinionOffset.y;
-                gearParts[index].glow = svgElement('circle', { cx, cy, r: 36, fill: 'url(#carryGlow)', opacity: 0 }, gearSvg);
-                const pinion = svgElement('g', { class: 'turning' }, gearSvg);
-                for (let arm = 0; arm < 4; arm++) {
-                    svgElement('rect', {
-                        x: -4, y: -26, width: 8, height: 26, rx: 3,
-                        fill: 'url(#pinionMetal)', stroke: '#4d5560', 'stroke-width': 1,
-                        transform: `rotate(${arm * 90})`
-                    }, pinion);
-                }
-                svgElement('circle', { r: 9, fill: 'url(#pinionMetal)', stroke: '#4d5560', 'stroke-width': 1 }, pinion);
-                svgElement('circle', { r: 3, fill: '#3b3b3b' }, pinion);
-                gearParts[index].pinion = pinion;
-                gearParts[index].badge = svgElement('text', { class: 'carry-badge', x: cx, y: cy - 34 }, gearSvg);
-            });
-            // A fixed reading window at the top of each wheel frames the digit that is shown.
-            gearCenters.forEach(({ x, y }) => {
+                    d: `M0 0 L0 ${-bottom} M${-offset} ${-tip} L${-offset} ${-bottom} L${offset} ${-bottom} L${offset} ${-tip}`,
+                    class: 'star-fork', 'stroke-width': star.tine,
+                    transform: `rotate(${angle + spoke * 360 / star.spokes})`
+                }, group);
+            }
+            svgElement('circle', { r: star.hub, fill: 'url(#pinionMetal)', stroke: '#4d5560', 'stroke-width': 1 }, group);
+            svgElement('circle', { r: 1.4, fill: '#3b3b3b' }, group);
+            return group;
+        }
+
+        function buildGears() {
+            // Paint order: pin flanges (rear face of each wheel), back plane (pins, star), discs with
+            // arms, front plane, windows and labels.
+            const flanges = svgElement('g', {}, gearSvg);
+            const back = svgElement('g', { class: 'plane-back' }, gearSvg);
+            const discs = svgElement('g', {}, gearSvg);
+            const planes = [svgElement('g', { class: 'plane-front' }, gearSvg), back];
+            const top = svgElement('g', {}, gearSvg);
+            gearDesign.wheels.forEach((center, wheel) => {
+                const parts = gearParts[shownWheels[wheel]];
+                const { disc, pins } = gearDesign;
+                const flangeWidth = pins.radius + pins.size + 2 - disc.radius;
+                svgElement('circle', {
+                    cx: center.x, cy: center.y, r: disc.radius + flangeWidth / 2, class: 'pin-flange', 'stroke-width': flangeWidth
+                }, flanges);
+                parts.wheel.push(buildWheelPins(planes[wheel % 2]), buildWheelDisc(discs));
+                const label = svgElement('text', { class: 'gear-label', x: center.x, y: center.y + 120 }, top);
+                label.textContent = placeNames[shownWheels[wheel]];
                 svgElement('rect', {
-                    x: x - 13, y: y - 55, width: 26, height: 28, rx: 5,
+                    x: center.x - 17, y: center.y - 71, width: 34, height: 34, rx: 6,
                     fill: 'url(#windowGlass)', stroke: '#2b2b2b', 'stroke-width': 3
-                }, gearSvg);
+                }, top);
+            });
+            gearDesign.stars.forEach((star, index) => {
+                const parts = gearParts[shownWheels[index]];
+                parts.glow = svgElement('circle', { cx: star.x, cy: star.y, r: 34, fill: 'url(#carryGlow)', opacity: 0 }, planes[index % 2]);
+                parts.star = { element: buildStar(star, planes[index % 2]), center: star };
+                parts.badge = svgElement('text', { class: 'carry-badge', x: star.x, y: star.y - 30 }, top);
             });
         }
 
         // Wheel positions use the same scale as the digit strips: position 10 + digit.
         function discTransform(index, position) {
-            const { x, y } = gearCenters[index];
+            const { x, y } = gearDesign.wheels[shownWheels.indexOf(index)];
             return `translate(${x}px, ${y}px) rotate(${-position * 36}deg)`;
         }
 
-        function pinionTransform(index, position) {
-            const { x, y } = gearCenters[index];
-            return `translate(${x + pinionOffset.x}px, ${y + pinionOffset.y}px) rotate(${pinionBaseAngle + position * 90}deg)`;
-        }
-
-        function gearElements(index) {
-            const parts = gearParts[index];
-            return parts.pinion ? [...parts.turning, parts.pinion] : parts.turning;
+        // Every digit turns a star by two spokes; at rest it always looks the same, so it starts at 0.
+        function starTransform({ center }, digits) {
+            return `translate(${center.x}px, ${center.y}px) rotate(${digits * 360 * 2 / gearDesign.star.spokes}deg)`;
         }
 
         function setGearPosition(index, position) {
-            gearElements(index).forEach(element => {
+            const { wheel, star } = gearParts[index];
+            [...wheel, ...(star ? [star.element] : [])].forEach(element => {
                 element.getAnimations().forEach(animation => animation.cancel());
             });
-            gearParts[index].turning.forEach(element => {
+            wheel.forEach(element => {
                 element.style.transform = discTransform(index, position);
             });
-            if (gearParts[index].pinion) {
-                gearParts[index].pinion.style.transform = pinionTransform(index, position);
-            }
+            if (star) star.element.style.transform = starTransform(star, 0);
         }
 
-        function stepKeyframes(makeTransform, from, to, carried) {
-            if (!carried) {
-                return [{ transform: makeTransform(from) }, { transform: makeTransform(to) }];
-            }
-            return [
-                { transform: makeTransform(from) },
-                { transform: makeTransform(from), offset: carryStart, easing: 'ease-in-out' },
-                { transform: makeTransform(to) }
-            ];
+        function curveAt(curve, progress) {
+            const scaled = Math.min(Math.max(progress, 0), 1) * (curve.length - 1);
+            const sample = Math.min(Math.floor(scaled), curve.length - 2);
+            return curve[sample] + (curve[sample + 1] - curve[sample]) * (scaled - sample);
         }
 
-        function animateGear(index, from, to, carried, options) {
-            gearParts[index].turning.forEach(element => {
-                element.animate(stepKeyframes(position => discTransform(index, position), from, to, carried), options);
+        // Progress (0..1) of a wheel carried over `depth` wheels while the leading wheel did `progress`:
+        // each finger pushes the next wheel along the carry curve, so nested carries compose.
+        function carriedProgress(progress, depth) {
+            for (let level = 0; level < depth; level++) progress = curveAt(gearCurves.carryWheel, progress);
+            return progress;
+        }
+
+        // A star follows the wheel to its left: pushed by a finger when that wheel is carried, otherwise
+        // turned by the wheel's own pins.
+        function starProgress(progress, depth) {
+            return depth === 0
+                ? curveAt(gearCurves.followStar, progress)
+                : curveAt(gearCurves.carryStar, carriedProgress(progress, depth - 1));
+        }
+
+        // Turning backwards runs the forward motion in reverse.
+        function directed(shape, direction) {
+            return progress => direction > 0 ? shape(progress) : 1 - shape(1 - progress);
+        }
+
+        // Keyframe offsets are in eased progress of the leading wheel, so all parts share its easing.
+        const curveSamples = gearCurves.carryWheel.length - 1;
+        function stepKeyframes(makeTransform, from, to, shape) {
+            return Array.from({ length: curveSamples + 1 }, (_, sample) => {
+                const progress = sample / curveSamples;
+                return { transform: makeTransform(from + (to - from) * shape(progress)), offset: progress };
             });
-            if (gearParts[index].pinion) {
-                gearParts[index].pinion.animate(
-                    stepKeyframes(position => pinionTransform(index, position), from, to, carried), options);
+        }
+
+        function animateGear(index, from, to, depth, options) {
+            const direction = Math.sign(to - from);
+            const { wheel, star } = gearParts[index];
+            const wheelShape = directed(progress => carriedProgress(progress, depth), direction);
+            wheel.forEach(element => {
+                element.animate(stepKeyframes(position => discTransform(index, position), from, to, wheelShape), options);
+            });
+            if (star) {
+                const shape = directed(progress => starProgress(progress, depth), direction);
+                star.element.animate(stepKeyframes(digits => starTransform(star, digits), 0, direction, shape), options);
             }
         }
 
@@ -762,13 +874,14 @@
                         : -((previousDigit - digit + 10) % 10);
                     const from = 10 + previousDigit;
                     const to = from + distance;
-                    // Only the wheel that moves every step follows the run's easing. Carried wheels
-                    // wait for the carry tooth and then roll softly.
-                    const carried = index !== leadingIndex;
-                    const options = { duration: stepDuration, easing: carried ? 'linear' : easing };
+                    // All wheels share the run's easing; carried wheels follow the carry curve of
+                    // the finger and star wheel to their right.
+                    const depth = leadingIndex - index;
+                    const options = { duration: stepDuration, easing };
+                    const shape = directed(progress => carriedProgress(progress, depth), Math.sign(distance));
                     // The repeated digits let 9 and 0 roll past each other in either direction.
-                    strip.animate(stepKeyframes(transform, from, to, carried), options);
-                    animateGear(index, from, to, carried, options);
+                    strip.animate(stepKeyframes(transform, from, to, shape), options);
+                    animateGear(index, from, to, depth, options);
                 }
             });
 

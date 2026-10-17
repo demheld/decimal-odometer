@@ -31,27 +31,48 @@ und 1000.
 
 Unter dem Zählwerk kann eine Seitenansicht der Mechanik eingeblendet werden.
 Sie ist beim Laden ausgeblendet; die runde Taste ⚙ unter ▶ blendet sie ein
-und wieder aus. Die Zahnräder drehen sich synchron mit den Zahlenrädern.
-Ein festes, aufrechtes Sichtfenster oben auf jedem Rad rahmt die
-angezeigte Ziffer ein:
+und wieder aus. Aus Platzgründen zeigt sie nur Hunderter, Zehner und Einer;
+das Tausenderrad fehlt nur in dieser Ansicht. Alle Teile drehen sich synchron
+mit den Zahlenrädern. Ein festes Sichtfenster oben auf jedem Rad rahmt die
+angezeigte Ziffer ein.
 
-- Jedes Zahlenrad hat einen Zahnkranz und genau einen rosa Mitnehmer. Er
-  liegt hinter dem Rad, ragt nur am Rand heraus und sitzt genau bei der 9.
-  Steht eine 9 im Fenster, zeigt der Mitnehmer also senkrecht nach oben.
-- Zwischen zwei Rädern sitzt oben ein kleines Zwischenrad. Es greift immer
-  in den Zahnkranz des linken (höheren) Rades.
-- Der Mitnehmer des rechten Rades erreicht das Zwischenrad nur beim
-  Schritt von 9 auf 0. In der ersten Hälfte des Schritts schwenkt er zum
-  Zwischenrad, das linke Rad wartet noch. In der zweiten Hälfte schiebt er
-  das Zwischenrad eine Vierteldrehung weiter, und das linke Rad dreht sich
-  um genau eine Ziffer: 10 Einer werden zu 1 Zehner. Das Zwischenrad
-  leuchtet dabei rosa und zeigt „+1“.
+- Jedes große Zahlenrad trägt außen einen Kranz aus 20 kleinen Stiften,
+  also zwei Stifte pro Ziffer. Dazu hat es einen dünnen rosa Arm mit zwei
+  rosa Fingerstiften. Die 9 ist rosa eingefärbt: Steht sie im Fenster, zeigt
+  der Arm schräg nach oben links zum Sternrad.
+- Zwischen zwei Zahlenrädern sitzt ein kleines Sternrad mit 5 schlanken
+  Gabelspeichen. In den Gabeln stecken immer Stifte des linken (höheren)
+  Rades. Dreht sich dieses Rad, dreht sich das Sternrad mit, und umgekehrt.
+- Die Fingerstifte des rechten Rades erreichen das Sternrad nur beim
+  Schritt von 9 auf 0. Sie gleiten in zwei Gabeln und drehen das Sternrad um
+  zwei Speichen (144°) weiter. Das Sternrad schiebt dabei zwei Stifte des
+  linken Rades weiter, also genau eine Ziffer: 10 Einer werden zu 1 Zehner.
+  Das Sternrad leuchtet dabei rosa und zeigt „+1“.
 - Beim Rückwärtszählen von 0 auf 9 läuft derselbe Vorgang rückwärts und
-  zeigt „−1“.
+  zeigt „−1“. Bei 99 + 1 schiebt der Zehner-Finger während des Übertrags
+  gleich den Hunderter mit.
+- Wie in einem echten Zählwerk liegen Stifte, Finger und Sternräder in zwei
+  Ebenen (vorne/hinten, die hintere ist etwas dunkler). So erreicht jeder
+  Finger nur sein eigenes Sternrad. Der rosa Arm läuft auf der Scheibe und
+  kreuzt in der Zeichnung deshalb manchmal ein Sternrad, ohne es zu berühren.
 - Bei 9999 + 1 gibt es kein fünftes Rad; das Zählwerk beginnt bei 0.
 
+Die Maße stehen als `gearDesign` in `odometer.html`. Das Skript
+[tools/check-gear-mechanism.cjs](./tools/check-gear-mechanism.cjs) baut
+daraus alle Teile als Polygone nach, dreht das Getriebe in kleinen Schritten
+und meldet jede unerlaubte Berührung, falsche Ziffern und zu starkes
+Nachrasten:
+
+```bash
+node tools/check-gear-mechanism.cjs           # muss mit "Getriebe OK" enden
+node tools/check-gear-mechanism.cjs --curves  # Bewegungskurven für gearCurves
+```
+
+Nach jeder Änderung an `gearDesign` beide Befehle ausführen und die
+ausgegebenen Kurven in `gearCurves` übernehmen.
+
 [getriebe.svg](./getriebe.svg) ist ein statisches Einzelbild dieser
-Ansicht bei 1999 zum Ansehen oder Ausdrucken. Es ist aus der Seite
+Ansicht bei 199 zum Ansehen oder Ausdrucken. Es ist aus der Seite
 erzeugt, wird aber nicht ins Docker-Image kopiert und ändert sich nicht
 automatisch mit, wenn das Getriebe in `odometer.html` angepasst wird.
 

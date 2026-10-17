@@ -14,6 +14,8 @@ sowie eine einblendbare Zahlen-Entdeckerleiste.
   Rechentasten und blauer Punkt bleiben während des Zählens bedienbar.
   In Hintergrund-Tabs kann der Browser die Zeitabstände verlängern.
 - Die Rechentasten addieren oder subtrahieren den jeweiligen Stellenwert.
+  Die Taste +1 spielt dabei einen kurzen, knackigen Klick-Ton (nicht beim
+  automatischen Zählen und nicht beim Tippen aufs Zählwerk).
 - Würde das Ergebnis negativ, bleibt das Zählwerk bei 0 und spielt einen
   lustigen Ton. Bei Addition über 9999 beginnt es wieder bei 0.
 - Die Entdeckerleiste hat eine gleichmäßige und eine logarithmische Skala.
@@ -144,7 +146,7 @@ docker logs decimal-odometer
 ```
 
 Zusätzlich im Browser Rechentasten, Punktverschiebung, Skalenwechsel und
-Aus-/Einblenden prüfen. Der Ton benötigt eine Benutzerinteraktion und
+Aus-/Einblenden prüfen. Die Töne benötigen eine Benutzerinteraktion und
 funktionierende Audioausgabe im Browser.
 
 ### Hinter einem bestehenden Webserver

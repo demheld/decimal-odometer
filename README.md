@@ -36,32 +36,38 @@ Sie ist beim Laden ausgeblendet; die runde Taste ⚙ unter ▶ blendet sie ein
 und wieder aus. Aus Platzgründen zeigt sie nur Hunderter, Zehner und Einer;
 das Tausenderrad fehlt nur in dieser Ansicht. Alle Teile bewegen sich
 synchron mit den Zahlenrädern. Die Ansicht hat keinen eigenen Hintergrund,
-sondern dieselbe Farbe wie die übrige Seite. Ein
-rotes Sichtfenster oben auf jedem Rad rahmt die angezeigte Ziffer ein; es ist
-so groß, dass der Rahmen keine Ziffer berührt, auch nicht die Unterlängen
-der Georgia-Ziffern 3, 4, 5, 7 und 9.
+sondern dieselbe Farbe wie die übrige Seite. Ein rotes Sichtfenster links an
+jedem Rad rahmt die angezeigte Ziffer ein; es ist so groß, dass der Rahmen
+keine Ziffer berührt, auch nicht die Unterlängen der Georgia-Ziffern 3, 4,
+5, 7 und 9.
 
-- Jedes Zahlenrad trägt vorne ein blaues Klinkenrad mit 10 schrägen Zähnen,
-  also einen Zahn pro Ziffer.
-- Hinter jedem Zahlenrad sitzt ein rosa Nocken genau auf der 9; die 9 ist
-  ebenfalls rosa. Steht die 9 im Fenster, zeigt der Nocken senkrecht nach
-  oben und ragt über den Rand des Zifferblatts hinaus.
-- Zwischen zwei Rädern liegt eine gerade graue Stange in zwei festen
-  Führungen. Ihre Spitze sitzt in einer Kerbe des linken (höheren)
-  Klinkenrads, ihr rechtes Ende liegt im Weg des Nockens des rechten Rades.
-- Beim Schritt von 9 auf 0 schiebt der Nocken die Stange zur Seite. Die
-  Stangenspitze schiebt dabei einen Zahn des linken Klinkenrads weiter,
-  genau eine Ziffer: 10 Einer werden zu 1 Zehner. An der Stangenspitze
-  leuchtet es rosa und „+1“ erscheint.
-- Hat der Nocken die Stange losgelassen, drückt eine Feder zwischen Bund und
-  linker Führung sie zurück. Die Spitze kippt dabei leicht in der rechten
-  Führung, gleitet über die schräge Seite des nächsten Zahns und rastet in
-  der nächsten Kerbe ein.
-- Bei 99 + 1 schiebt der Zehner-Nocken während des Übertrags gleich die
-  Stange zum Hunderter mit.
-- Beim Rückwärtszählen von 0 auf 9 läuft dieselbe Bewegung rückwärts und
-  zeigt „−1“. Ein echtes Klinkenrad könnte das nicht; die Animation zeigt
-  die Bewegung nur rückwärts abgespielt.
+Das Getriebe ist ein Malteserkreuz-Getriebe (Genfer Getriebe):
+
+- Jedes Zahlenrad hat 10 blaue Speichen, jeweils zwischen zwei Ziffern, mit
+  einem runden Stift am Ende.
+- Jedes Zahlenrad hat außerdem einen rosa Arm genau zwischen 9 und 0, ebenfalls
+  mit einem Stift am Ende. Die 9 ist rosa.
+- Zwischen zwei Rädern sitzt ein grauer Stern: eine kleine Scheibe mit vier
+  schmalen Schlitzen. Die Stifte des linken (höheren) Rades laufen durch
+  diese Schlitze. Eine Ziffer des linken Rades dreht den Stern also um eine
+  Vierteldrehung, und umgekehrt.
+- Der rosa Stift des rechten Rades erreicht den Stern nur beim Schritt von
+  9 auf 0. Er läuft dann von der anderen Seite durch einen Schlitz, dreht
+  den Stern um eine Vierteldrehung und damit das linke Rad um genau eine
+  Ziffer weiter: 10 Einer werden zu 1 Zehner. Der Stern leuchtet dabei rosa,
+  und „+1“ erscheint.
+- Bei 99 + 1 schiebt der rosa Stift des Zehnerrads während des Übertrags
+  gleich den Stern zum Hunderter mit.
+- Beim Rückwärtszählen von 0 auf 9 läuft derselbe Vorgang rückwärts und
+  zeigt „−1“; anders als ein Klinkenrad funktioniert dieses Getriebe in
+  beide Richtungen.
+- Die Stifte sitzen genau auf dem Radius, bei dem sie unter 45° in einen
+  Schlitz eintreten und wieder austreten. So schiebt ein Stift den Stern
+  nie seitlich, sondern läuft sauber durch den Schlitz.
+- Wie in einem echten Zählwerk liegen die Teile in zwei Ebenen: Die Stifte
+  von Rad w und der rosa Stift von Rad w + 1 liegen in der Ebene des Sterns
+  dazwischen. Die hintere Ebene ist heller gezeichnet. So berühren sich
+  Stifte benachbarter Räder nie.
 - Bei 9999 + 1 gibt es kein fünftes Rad; das Zählwerk beginnt bei 0.
 
 Die Maße stehen als `gearDesign` in `odometer.html`, die Bewegung berechnet
@@ -69,15 +75,14 @@ der Code zwischen `// gear mechanism start` und `// gear mechanism end`.
 Das Skript [tools/check-gear-mechanism.cjs](./tools/check-gear-mechanism.cjs)
 führt genau diesen Code aus und prüft:
 
-- Ein Übertrag dreht das linke Rad um eine Ziffer (Abweichung höchstens
-  `gearDesign.check.maxSettle` Grad).
-- Der Nocken lässt die Stange im Schritt los, und die Stange ist vor dem
-  Schrittende wieder in Ruhe.
-- Ein Nocken berührt eine Stange nur in seinem eigenen Schritt von 9 auf 0.
-- Die Stangenspitze schiebt an der steilen Zahnflanke und rutscht nicht über
-  die Zahnspitze; sie schneidet nie in ein Klinkenrad.
-- Die Stange verdeckt kein Sichtfenster, ihr Ende liegt außerhalb der
-  Zifferblätter, und sie berührt keine fremden Klinkenräder.
+- Der Stern dreht sich pro Schritt um genau 90°, und der rosa Stift braucht
+  in jedem Moment denselben Sternwinkel wie der Stift des linken Rades
+  (beide bleiben in ihrem Schlitz).
+- Kein Stift schneidet in einen Stern: beim Übertrag, wenn das linke Rad
+  allein dreht (rechtes Rad auf jeder Ziffer) und wenn das rechte Rad allein
+  von 0 bis 9 dreht.
+- Stifte benachbarter Räder in derselben Ebene berühren sich nie.
+- Die Sterne liegen außerhalb der Zifferblätter.
 
 ```bash
 node tools/check-gear-mechanism.cjs   # muss mit "Getriebe OK" enden

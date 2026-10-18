@@ -249,43 +249,37 @@
             text-anchor: middle;
             dominant-baseline: central;
         }
-        .cam {
-            fill: #ff7fd8;
-        }
         .gear-digit.carry-digit {
             fill: #ffa6e6;
         }
-        .ratchet {
-            fill: #7aa5e6;
-            filter: url(#gearShadow);
+        .spoke {
+            stroke: #7aa5e6;
+            stroke-linecap: round;
         }
-        .ratchet-hub {
+        .pin {
             fill: #5f86c4;
+        }
+        .carry-arm {
+            stroke: #ff7fd8;
+            stroke-width: 4;
+            stroke-linecap: round;
+        }
+        .carry-pin {
+            fill: #ff7fd8;
+            stroke: #d6189f;
+            stroke-width: 1;
+        }
+        .star {
+            fill: #a9b1ba;
+            stroke: #8a939d;
+            stroke-width: 1;
+            filter: url(#gearShadow);
         }
         .axle {
             fill: #20252c;
         }
-        .rod {
-            stroke: #a9b1ba;
-            stroke-linecap: round;
-            filter: url(#gearShadow);
-        }
-        .rod-pin {
-            fill: #8a939d;
-        }
-        .collar {
-            fill: #8a939d;
-        }
-        .guide {
-            fill: #6b747f;
-            stroke: #4b535c;
-            stroke-width: 1;
-        }
-        .spring {
-            fill: none;
-            stroke: #8a939d;
-            stroke-width: 1.5;
-            vector-effect: non-scaling-stroke;
+        .plane-back {
+            opacity: .55;
         }
         .reading-window {
             fill: none;
@@ -476,8 +470,8 @@
     </div>
     </div>
 
-    <figure class="gear-view" id="gearView" hidden aria-label="Blick ins Getriebe: Beim Schritt von 9 auf 0 schiebt der rosa Nocken auf der 9 eine Stange, und die Stange schiebt das Klinkenrad des nächsten Zahlenrads um einen Zahn, also eine Ziffer, weiter.">
-        <svg id="gearSvg" viewBox="0 106 544 214" aria-hidden="true">
+    <figure class="gear-view" id="gearView" hidden aria-label="Blick ins Getriebe: Zwischen zwei Zahlenrädern sitzt ein Stern mit vier Schlitzen. Beim Schritt von 9 auf 0 läuft der rosa Stift zwischen 9 und 0 durch einen Schlitz, dreht den Stern um eine Vierteldrehung und so das nächste Zahlenrad um eine Ziffer weiter.">
+        <svg id="gearSvg" viewBox="18 58 532 192" aria-hidden="true">
             <defs>
                 <filter id="gearShadow" x="-20%" y="-20%" width="140%" height="140%">
                     <feDropShadow dx="1.2" dy="2" stdDeviation="1.6" flood-opacity=".45"/>
@@ -647,162 +641,89 @@
         // left out for space). The sizes live in gearDesign; the motion is computed by the mechanism
         // below, which tools/check-gear-mechanism.cjs also runs to check the design.
         const gearDesign = {
-            wheels: [{ x: 110, y: 210 }, { x: 272, y: 210 }, { x: 434, y: 210 }],
+            wheels: [{ x: 100, y: 140 }, { x: 284, y: 140 }, { x: 468, y: 140 }],
+            // Reading window on the left of every wheel, pointing at the star to its left.
+            windowAngle: 270,
             // The window frame (stroke 2.5) is sized to the ink of the Georgia digits (about 13 x 19,
             // centred slightly below the digit position) plus a small gap, so it never covers a digit.
-            dial: { radius: 72, digitRadius: 60, window: { width: 22, height: 28, offset: 0.5 } },
-            ratchet: { root: 25, tip: 35, rise: 31.2, drop: 33.5 },
-            cam: { inner: 14, radius: 87, width: 5, angle: 324 },
-            rod: {
-                width: 4.5, tipRadius: 31, tipAngle: -8, aimRadius: 85, aimAngle: -20, length: 145.5,
-                clearance: 1, returnTime: 0.12, rightGuide: 26, leftGuide: 72, collar: 104
-            },
-            check: { maxSettle: 1.5 }
+            dial: { radius: 61, digitRadius: 45, window: { width: 22, height: 28, offset: 0.5 } },
+            spokes: { inner: 55, width: 4 },
+            pins: { size: 3 },
+            star: { clearance: 0.5, hub: 5 }
         };
 
         // gear mechanism start
-        // Carry with a sliding rod: every wheel has a blue ratchet wheel with 10 teeth (one per digit)
-        // and a pink cam exactly on the 9 that reaches past the rim of the dial. Between two wheels a
-        // straight rod slides in two guides. During the step from 9 to 0 the cam of the right wheel
-        // pushes the end of the rod, and the rod tip pushes one tooth of the left wheel's ratchet wheel,
-        // so the left wheel turns by exactly one digit. When the cam has let go, a spring pushes the rod
-        // back; its tip rides over the next tooth into the next notch (the rod tilts in its right guide).
-        // Planes: ratchet wheels and rod bodies in front of the dials, cams and the rod end pins behind.
-        // Angles: degrees clockwise from 12 o'clock; a wheel showing digit d is rotated by -36 * d.
+        // Carry with a Geneva star: every wheel has 10 blue spokes, one between each pair of digits,
+        // each ending in a round pin, plus a pink arm with a pink pin exactly between 9 and 0. Between
+        // two wheels sits a star (a small disc with 4 narrow radial slots). The pins of the left wheel
+        // run through its slots: one digit of that wheel turns the star by exactly 90 degrees. The pink
+        // pin of the right wheel reaches the star only during its step from 9 to 0: it runs through a
+        // slot from the other side, turns the star by 90 degrees and so the left wheel by one digit.
+        // The pins sit at the radius where they enter and leave a slot exactly on its 45 degree line,
+        // so the pin is never pushed sideways out of the slot. Like in a real odometer the parts lie in
+        // two planes: the spokes of wheel w and the pink pin of wheel w + 1 lie in the plane of the star
+        // between them (w % 2); shanks run in the wheel plane behind.
+        // Angles: degrees clockwise from 12 o'clock. A wheel showing digit d is rotated by
+        // windowAngle - 36 * d, so digit d sits in the window; digit k is drawn at angle 36 * k.
         function createMechanism(design) {
             const RAD = Math.PI / 180;
             const polar = (c, r, a) => ({ x: c.x + r * Math.sin(a * RAD), y: c.y - r * Math.cos(a * RAD) });
             const direction = (a, b) => Math.atan2(b.x - a.x, a.y - b.y) / RAD;
             const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-            const add = (p, v, s) => ({ x: p.x + v.x * s, y: p.y + v.y * s });
-            const { ratchet, cam, rod } = design;
+            const { pins, star } = design;
+            const half = distance(design.wheels[0], design.wheels[1]) / 2;
+            const pinRadius = half / (Math.sin(18 * RAD) + Math.cos(18 * RAD));
+            const mouthRadius = pinRadius * Math.sin(18 * RAD) / Math.sin(45 * RAD);
+            const starRadius = mouthRadius - pins.size - star.clearance;
+            const slotHalf = pins.size + star.clearance;
+            const slotBottom = half - pinRadius - slotHalf;
 
-            // Steep tooth face at radius r, as wheel angle relative to the start of a tooth.
-            const faceAngle = r => ratchet.rise + (ratchet.tip - r) / (ratchet.tip - ratchet.root) * (ratchet.drop - ratchet.rise);
-            // Ratchet phase so that at rest the rod tip sits in a notch just next to a steep face.
-            const phase = rod.tipAngle - (rod.width / 2) / rod.tipRadius / RAD - rod.clearance - faceAngle(rod.tipRadius);
+            const wheelRotation = position => design.windowAngle - 36 * position;
+            const spokeAngle = j => 36 * j + 18;
+            const carryAngle = 342;
 
-            function ratchetRadius(angle, rotation) {
-                const u = (((angle - rotation - phase) % 36) + 36) % 36;
-                if (u <= ratchet.rise) return ratchet.root + (ratchet.tip - ratchet.root) * (u / ratchet.rise) ** 1.3;
-                if (u <= ratchet.drop) return ratchet.tip - (ratchet.tip - ratchet.root) * (u - ratchet.rise) / (ratchet.drop - ratchet.rise);
-                return ratchet.root;
-            }
-
-            const rods = design.wheels.slice(0, -1).map((left, gap) => {
-                const right = design.wheels[gap + 1];
-                const tip = polar(left, rod.tipRadius, rod.tipAngle);
-                const aim = polar(right, rod.aimRadius, rod.aimAngle);
-                const length = distance(tip, aim);
-                const axis = { x: (tip.x - aim.x) / length, y: (tip.y - aim.y) / length };
-                let lift = { x: -axis.y, y: axis.x };
-                if (lift.x * (tip.x - left.x) + lift.y * (tip.y - left.y) < 0) lift = { x: axis.y, y: -axis.x };
-                const end = add(tip, axis, -rod.length);
-                return {
-                    left, right, tip, end, axis, lift,
-                    rightGuide: add(end, axis, rod.rightGuide),
-                    leftGuide: add(tip, axis, -rod.leftGuide),
-                    collar: add(tip, axis, -rod.collar)
-                };
-            });
-
-            const cross = (v, w) => v.x * w.y - v.y * w.x;
-
-            // How far the cam arm of the right wheel (rotated by `rotation`) has pushed the rod end: the
-            // arm meets the rod line at some radius; while that is within reach the end sits just ahead.
-            function camPush(gap, rotation) {
-                const g = rods[gap];
-                const arm = polar({ x: 0, y: 0 }, 1, cam.angle + rotation);
-                const denominator = cross(g.axis, arm);
-                if (Math.abs(denominator) < 1e-9) return 0;
-                const offset = { x: g.right.x - g.end.x, y: g.right.y - g.end.y };
-                const along = cross(offset, arm) / denominator;
-                const radius = cross(offset, g.axis) / denominator;
-                if (radius < cam.inner || radius > cam.radius - cam.width / 2 + rod.width / 2) return 0;
-                return Math.max(0, along + (rod.width / 2 + cam.width / 2) / Math.abs(denominator));
-            }
-
-            // Progress (digits) of the left wheel that the rod tip has pushed when the rod is in by `push`.
-            function pushedProgress(gap, push) {
-                const g = rods[gap];
-                const tip = add(g.tip, g.axis, push);
-                const radius = distance(g.left, tip);
-                const face = phase + faceAngle(Math.min(ratchet.tip, Math.max(ratchet.root, radius)));
-                return Math.max(0, (face + (rod.width / 2) / radius / RAD - direction(g.left, tip)) / 36);
-            }
-
-            // Rod tip after pushing by `push` and tilting so that the tip just clears the ratchet outline.
-            function tipAt(gap, push, tilt) {
-                const g = rods[gap];
-                const pivot = g.rightGuide;
-                const tip = add(g.tip, g.axis, push);
-                return polar(pivot, distance(pivot, tip), direction(pivot, tip) + tilt);
-            }
-            function tipTilt(gap, push, leftRotation) {
-                const g = rods[gap];
-                const tangent = g.axis;
-                const clear = tilt => {
-                    const tip = tipAt(gap, push, tilt);
-                    for (let o = -rod.width / 2; o <= rod.width / 2 + 1e-9; o += rod.width / 8) {
-                        const p = add(tip, tangent, o);
-                        const reach = Math.sqrt(Math.max(0, (rod.width / 2) ** 2 - o * o));
-                        if (distance(g.left, p) - reach < ratchetRadius(direction(g.left, p), leftRotation) - 0.05) return false;
-                    }
-                    return true;
-                };
-                const sign = distance(tipAt(gap, push, 1), g.left) > distance(tipAt(gap, push, -1), g.left) ? 1 : -1;
-                if (clear(0)) return 0;
-                let low = 0, high = 12;
-                for (let i = 0; i < 24; i++) {
-                    const mid = (low + high) / 2;
-                    if (clear(sign * mid)) high = mid; else low = mid;
+            // Star outline (star frame, slots at 45 + 90 k): lobes on starRadius, straight slot walls,
+            // round slot bottoms.
+            const outline = [];
+            const edge = Math.sqrt(starRadius ** 2 - slotHalf ** 2);
+            for (let k = 0; k < 4; k++) {
+                const c = 45 + 90 * k;
+                const out = polar({ x: 0, y: 0 }, 1, c);
+                const side = { x: -out.y, y: out.x };
+                const at = (t, s) => ({ x: out.x * t + side.x * s, y: out.y * t + side.y * s });
+                outline.push(at(edge, -slotHalf), at(slotBottom, -slotHalf));
+                for (let i = 1; i < 12; i++) {
+                    const a = Math.PI * i / 12;
+                    outline.push(at(slotBottom - slotHalf * Math.sin(a), -slotHalf * Math.cos(a)));
                 }
-                return sign * high;
+                outline.push(at(slotBottom, slotHalf), at(edge, slotHalf));
+                const from = c + Math.asin(slotHalf / starRadius) / RAD;
+                const to = c + 90 - Math.asin(slotHalf / starRadius) / RAD;
+                for (let a = from + 3; a < to - 1; a += 3) outline.push(polar({ x: 0, y: 0 }, starRadius, a));
             }
 
-            // One carry step (right wheel 9 -> 0) of the last gap, sampled evenly: rod push and the
-            // progress of the left wheel. After the cam has let go the spring pushes the rod back.
-            const samples = 96;
-            const lastGap = rods.length - 1;
-            const run = [];
-            let carried = 0, maxPush = 0, released = null;
-            for (let i = 0; i <= samples; i++) {
-                const p = i / samples;
-                let push = camPush(lastGap, -36 * (9 + p));
-                if (push === 0 && maxPush > 0 && released === null) released = p;
-                maxPush = Math.max(maxPush, push);
-                if (released !== null) push = maxPush * Math.max(0, 1 - (p - released) / rod.returnTime);
-                carried = Math.max(carried, pushedProgress(lastGap, push));
-                run.push({ p, push, carried });
+            // Star angle (clockwise, from rest) while a pin crosses it during one step, t = 0..1. The pin
+            // stays in the slot, so the slot points at the pin.
+            function stepAngle(t) {
+                const left = design.wheels[0];
+                const center = { x: left.x + half, y: left.y };
+                const pin = polar(left, pinRadius, 108 - 36 * t);
+                return ((direction(center, pin) - 225) % 360 + 360) % 360;
             }
-            const carryEnd = run[samples].carried;
-            const carryCurve = run.map(sample => sample.carried / carryEnd);
-            const pushCurve = run.map(sample => sample.push);
-
-            function curveAt(curve, x) {
-                const scaled = Math.min(Math.max(x, 0), 1) * (curve.length - 1);
-                const index = Math.min(Math.floor(scaled), curve.length - 2);
-                return curve[index] + (curve[index + 1] - curve[index]) * (scaled - index);
+            // The star is coupled to the wheel on its left: one digit = one quarter turn.
+            function starAngle(leftPosition) {
+                const whole = Math.floor(leftPosition);
+                const t = leftPosition - whole;
+                return 90 * whole + (t < 1e-9 ? 0 : stepAngle(t));
             }
 
-            // Progress (0..1) of a wheel that is carried over `depth` wheels while the driven wheel has
-            // done `progress` of its step; nested carries compose. Backwards runs the same motion reversed.
-            function wheelProgress(progress, depth, sign = 1) {
-                let x = sign > 0 ? progress : 1 - progress;
-                for (let level = 0; level < depth; level++) x = curveAt(carryCurve, x);
-                return sign > 0 ? x : 1 - x;
-            }
+            // A carry turns the left wheel exactly in step with the wheel that carries.
+            const wheelProgress = progress => progress;
 
-            // Pose of the rod between design wheels gap and gap + 1 for their (fractional) digit positions.
-            function rodPose(gap, leftPosition, rightPosition) {
-                const x = ((rightPosition % 10) + 10) % 10;
-                const push = x > 9 ? curveAt(pushCurve, x - 9) : 0;
-                return { push, tilt: tipTilt(gap, push, -36 * leftPosition) };
-            }
-
+            const starCenters = design.wheels.slice(0, -1).map(w => ({ x: w.x + half, y: w.y }));
             return {
-                rods, phase, polar, direction, distance, add, ratchetRadius, camPush, pushedProgress, tipAt, tipTilt,
-                carryEnd, carryCurve, pushCurve, released, wheelProgress, rodPose
+                polar, direction, distance, half, pinRadius, mouthRadius, starRadius, slotHalf, slotBottom,
+                wheelRotation, spokeAngle, carryAngle, outline, stepAngle, starAngle, wheelProgress, starCenters
             };
         }
         // gear mechanism end
@@ -813,9 +734,8 @@
         // ids indexes of the wheels in the side view; gearDesign.wheels[w] belongs to shownWheels[w].
         const shownWheels = [1, 2, 3];
         const placeNames = ['Tausender', 'Hunderter', 'Zehner', 'Einer'];
-        // Per ids index: the turning wheel group; per gap (index of its left wheel): rod and spring.
-        const gearParts = ids.map(() => ({ wheel: null, rod: null, spring: null, glow: null, badge: null }));
-        const springRest = 30;
+        // Per ids index: the turning groups of the wheel; the star to its right (gap index = left wheel).
+        const gearParts = ids.map(() => ({ wheel: [], star: null, glow: null, badge: null }));
 
         function svgElement(name, attributes, parent) {
             const element = document.createElementNS(svgNs, name);
@@ -826,119 +746,94 @@
 
         const point = ({ x, y }) => `${x.toFixed(2)} ${y.toFixed(2)}`;
         const local = (radius, angle) => mechanism.polar({ x: 0, y: 0 }, radius, angle);
-
-        function buildWheel(parent) {
-            const { dial, cam } = gearDesign;
+        const turning = (parent, w) => {
             const group = svgElement('g', { class: 'turning' }, parent);
-            const a = cam.angle;
-            const tip = cam.radius;
-            svgElement('path', {
-                d: `M${point(local(cam.inner, a - 30))} L${point(local(dial.radius - 2, a - 3.4))} L${point(local(tip - 3, a - 1.6))} ` +
-                    `Q${point(local(tip + 0.5, a))} ${point(local(tip - 3, a + 1.6))} L${point(local(dial.radius - 2, a + 3.4))} ` +
-                    `L${point(local(cam.inner, a + 30))} Z`,
-                class: 'cam'
-            }, group);
-            svgElement('circle', { r: 18, class: 'cam' }, group);
-            svgElement('circle', { r: dial.radius, class: 'dial' }, group);
-            for (let digit = 0; digit < 10; digit++) {
-                const label = svgElement('text', {
-                    class: digit === 9 ? 'gear-digit carry-digit' : 'gear-digit', x: 0, y: -dial.digitRadius,
-                    transform: `rotate(${digit * 36})`
-                }, group);
-                label.textContent = digit;
-            }
-            const outline = [];
-            for (let angle = 0; angle < 360; angle += 0.75) outline.push(point(local(mechanism.ratchetRadius(angle, 0), angle)));
-            svgElement('path', { d: `M${outline.join('L')}Z`, class: 'ratchet' }, group);
-            svgElement('circle', { r: 12, class: 'ratchet-hub' }, group);
-            svgElement('circle', { r: 4.5, class: 'axle' }, group);
+            gearParts[shownWheels[w]].wheel.push(group);
             return group;
-        }
-
-        function guide(at, angle, parent) {
-            const g = svgElement('g', { transform: `translate(${point(at)}) rotate(${angle.toFixed(2)})` }, parent);
-            const inner = gearDesign.rod.width / 2 + 1;
-            svgElement('rect', { x: -6, y: -inner - 5, width: 12, height: 5, rx: 1.5, class: 'guide' }, g);
-            svgElement('rect', { x: -6, y: inner, width: 12, height: 5, rx: 1.5, class: 'guide' }, g);
-        }
+        };
 
         function buildGears() {
-            const wheels = svgElement('g', {}, gearSvg);
-            const rods = svgElement('g', {}, gearSvg);
+            const { dial, spokes, pins, star, windowAngle } = gearDesign;
+            const shanks = svgElement('g', {}, gearSvg);
+            const dials = svgElement('g', {}, gearSvg);
+            // Plane 1 lies behind plane 0 and is drawn lighter.
+            const planes = [null, svgElement('g', { class: 'plane-back' }, gearSvg)];
+            planes[0] = svgElement('g', {}, gearSvg);
             const top = svgElement('g', {}, gearSvg);
+            const stars = planes.map(plane => svgElement('g', {}, plane));
+            const pinLayers = planes.map(plane => svgElement('g', {}, plane));
+
             gearDesign.wheels.forEach((center, w) => {
-                const parts = gearParts[shownWheels[w]];
-                parts.wheel = buildWheel(wheels);
-                const { width, height, offset } = gearDesign.dial.window;
-                svgElement('rect', {
-                    x: center.x - width / 2, y: center.y - gearDesign.dial.digitRadius + offset - height / 2,
-                    width, height, rx: 3, class: 'reading-window'
-                }, top);
-                const label = svgElement('text', { class: 'gear-label', x: center.x, y: center.y + 100 }, top);
+                const shank = turning(shanks, w);
+                for (let j = 0; j < 10; j++) {
+                    const a = mechanism.spokeAngle(j);
+                    svgElement('path', { d: `M${point(local(spokes.inner, a))} L${point(local(mechanism.pinRadius, a))}`, class: 'spoke', 'stroke-width': spokes.width }, shank);
+                }
+                const face = turning(dials, w);
+                svgElement('circle', { r: dial.radius, class: 'dial' }, face);
+                for (let digit = 0; digit < 10; digit++) {
+                    // Rotated so that the digit standing in the window is upright.
+                    const label = svgElement('text', {
+                        class: digit === 9 ? 'gear-digit carry-digit' : 'gear-digit', x: 0, y: -dial.digitRadius,
+                        transform: `rotate(${digit * 36}) rotate(${-windowAngle} 0 ${-dial.digitRadius})`
+                    }, face);
+                    label.textContent = digit;
+                }
+                // The pink arm runs on the dial exactly between 9 and 0 out to its pin.
+                const carry = mechanism.carryAngle;
+                svgElement('path', { d: `M${point(local(12, carry))} L${point(local(mechanism.pinRadius, carry))}`, class: 'carry-arm' }, face);
+                svgElement('circle', { r: 9, class: 'axle' }, face);
+                const spokePins = turning(pinLayers[w % 2], w);
+                for (let j = 0; j < 10; j++) {
+                    const { x, y } = local(mechanism.pinRadius, mechanism.spokeAngle(j));
+                    svgElement('circle', { cx: x.toFixed(2), cy: y.toFixed(2), r: pins.size, class: 'pin' }, spokePins);
+                }
+                const carryPin = turning(pinLayers[(w + 1) % 2], w);
+                const { x, y } = local(mechanism.pinRadius, carry);
+                svgElement('circle', { cx: x.toFixed(2), cy: y.toFixed(2), r: pins.size, class: 'carry-pin' }, carryPin);
+
+                const { width, height, offset } = dial.window;
+                const at = mechanism.polar(center, dial.digitRadius, windowAngle);
+                svgElement('rect', { x: at.x - width / 2, y: at.y + offset - height / 2, width, height, rx: 3, class: 'reading-window' }, top);
+                const label = svgElement('text', { class: 'gear-label', x: center.x, y: center.y + dial.radius + 30 }, top);
                 label.textContent = placeNames[shownWheels[w]];
             });
-            mechanism.rods.forEach((g, gap) => {
-                const parts = gearParts[shownWheels[gap]];
-                const angle = Math.atan2(g.axis.y, g.axis.x) * 180 / Math.PI;
-                parts.glow = svgElement('circle', { cx: g.tip.x, cy: g.tip.y, r: 22, fill: 'url(#carryGlow)', opacity: 0 }, rods);
-                parts.spring = svgElement('g', { class: 'turning' }, rods);
-                let zigzag = 'M0 0';
-                for (let i = 1; i < 14; i++) zigzag += ` L${(springRest * i / 14).toFixed(2)} ${i % 2 ? 5 : -5}`;
-                svgElement('path', { d: `${zigzag} L${springRest} 0`, class: 'spring' }, parts.spring);
-                parts.rod = svgElement('g', { class: 'turning' }, rods);
-                svgElement('path', { d: `M${point(g.end)} L${point(g.tip)}`, class: 'rod', 'stroke-width': gearDesign.rod.width }, parts.rod);
-                svgElement('circle', { cx: g.end.x, cy: g.end.y, r: gearDesign.rod.width / 2 + 0.5, class: 'rod-pin' }, parts.rod);
-                const collarHeight = gearDesign.rod.width + 6;
-                svgElement('rect', {
-                    x: -3, y: -collarHeight / 2, width: 6, height: collarHeight, rx: 1.5, class: 'collar',
-                    transform: `translate(${point(g.collar)}) rotate(${angle.toFixed(2)})`
-                }, parts.rod);
-                guide(g.rightGuide, angle, rods);
-                guide(g.leftGuide, angle, rods);
-                parts.badge = svgElement('text', { class: 'carry-badge', x: g.tip.x - 4, y: g.tip.y - 22 }, top);
+
+            const outline = `M${mechanism.outline.map(point).join('L')}Z`;
+            mechanism.starCenters.forEach((center, s) => {
+                const parts = gearParts[shownWheels[s]];
+                parts.glow = svgElement('circle', { cx: center.x, cy: center.y, r: 34, fill: 'url(#carryGlow)', opacity: 0 }, stars[s % 2]);
+                parts.star = svgElement('g', { class: 'turning' }, stars[s % 2]);
+                svgElement('path', { d: outline, class: 'star' }, parts.star);
+                svgElement('circle', { r: star.hub, class: 'axle' }, parts.star);
+                parts.badge = svgElement('text', { class: 'carry-badge', x: center.x, y: center.y - mechanism.starRadius - 10 }, top);
             });
         }
 
         // Wheel positions use the same scale as the digit strips: position 10 + digit.
         function wheelTransform(index, position) {
             const { x, y } = gearDesign.wheels[shownWheels.indexOf(index)];
-            return `translate(${x}px, ${y}px) rotate(${-position * 36}deg)`;
+            return `translate(${x}px, ${y}px) rotate(${mechanism.wheelRotation(position)}deg)`;
         }
 
-        // Rod and spring of the gap whose left wheel is ids[index], for both wheel positions.
-        function rodTransforms(index, leftPosition, rightPosition) {
-            const gap = shownWheels.indexOf(index);
-            const g = mechanism.rods[gap];
-            const { push, tilt } = mechanism.rodPose(gap, leftPosition, rightPosition);
-            const pivot = g.rightGuide;
-            const shift = mechanism.add({ x: 0, y: 0 }, g.axis, push);
-            const rod = `translate(${pivot.x}px, ${pivot.y}px) rotate(${tilt}deg) translate(${-pivot.x + shift.x}px, ${-pivot.y + shift.y}px)`;
-            const collarAt = mechanism.polar(pivot, mechanism.distance(pivot, mechanism.add(g.collar, g.axis, push)),
-                mechanism.direction(pivot, mechanism.add(g.collar, g.axis, push)) + tilt);
-            const seat = mechanism.add(g.leftGuide, g.axis, -6);
-            const length = mechanism.distance(collarAt, seat);
-            const angle = Math.atan2(seat.y - collarAt.y, seat.x - collarAt.x) * 180 / Math.PI;
-            const spring = `translate(${collarAt.x}px, ${collarAt.y}px) rotate(${angle}deg) scale(${length / springRest}, 1)`;
-            return { rod, spring };
+        // The star to the right of ids[index] is coupled to that wheel.
+        function starTransform(index, position) {
+            const { x, y } = mechanism.starCenters[shownWheels.indexOf(index)];
+            return `translate(${x}px, ${y}px) rotate(${mechanism.starAngle(position)}deg)`;
         }
-
-        const hasRod = index => shownWheels.includes(index) && shownWheels.includes(index + 1);
 
         function cancelGearAnimations(index) {
-            const { wheel, rod, spring } = gearParts[index];
-            [wheel, rod, spring].filter(Boolean).forEach(element => element.getAnimations().forEach(animation => animation.cancel()));
+            const { wheel, star } = gearParts[index];
+            [...wheel, star].filter(Boolean).forEach(element => element.getAnimations().forEach(animation => animation.cancel()));
         }
 
         // positions: wheel position (10 + digit, may be fractional) per ids index.
         function setGearPositions(positions) {
             ids.forEach((_, index) => {
                 cancelGearAnimations(index);
-                if (gearParts[index].wheel) gearParts[index].wheel.style.transform = wheelTransform(index, positions[index]);
-                if (hasRod(index)) {
-                    const { rod, spring } = rodTransforms(index, positions[index], positions[index + 1]);
-                    gearParts[index].rod.style.transform = rod;
-                    gearParts[index].spring.style.transform = spring;
-                }
+                const { wheel, star } = gearParts[index];
+                wheel.forEach(element => { element.style.transform = wheelTransform(index, positions[index]); });
+                if (star) star.style.transform = starTransform(index, positions[index]);
             });
         }
 
@@ -948,22 +843,18 @@
         function animateGears(positionsAt, options) {
             const frames = Array.from({ length: gearSamples + 1 }, (_, i) => ({ offset: i / gearSamples, positions: positionsAt(i / gearSamples) }));
             ids.forEach((_, index) => {
-                const parts = gearParts[index];
-                if (parts.wheel) {
-                    parts.wheel.animate(frames.map(({ offset, positions }) => ({ offset, transform: wheelTransform(index, positions[index]) })), options);
-                }
-                if (hasRod(index)) {
-                    const poses = frames.map(({ offset, positions }) => ({ offset, ...rodTransforms(index, positions[index], positions[index + 1]) }));
-                    parts.rod.animate(poses.map(({ offset, rod }) => ({ offset, transform: rod })), options);
-                    parts.spring.animate(poses.map(({ offset, spring }) => ({ offset, transform: spring })), options);
-                }
+                const { wheel, star } = gearParts[index];
+                wheel.forEach(element => {
+                    element.animate(frames.map(({ offset, positions }) => ({ offset, transform: wheelTransform(index, positions[index]) })), options);
+                });
+                if (star) star.animate(frames.map(({ offset, positions }) => ({ offset, transform: starTransform(index, positions[index]) })), options);
             });
         }
 
         function flashCarry(index, direction) {
             const { glow, badge } = gearParts[index];
             if (!glow) return;
-            glow.animate([{ opacity: 0 }, { opacity: 1, offset: .55 }, { opacity: 0 }], { duration: stepDuration * 2 });
+            glow.animate([{ opacity: 0 }, { opacity: 1, offset: .5 }, { opacity: 0 }], { duration: stepDuration * 2 });
             badge.textContent = direction > 0 ? '+1' : '−1';
             badge.animate([
                 { opacity: 0, transform: 'translateY(8px)' },
@@ -982,7 +873,7 @@
             const animating = direction !== 0 && leadingIndex >= 0 && !reducedMotion;
 
             // Position (10 + digit, fractional while turning) of every wheel at `progress` of the step.
-            // Carried wheels follow the carry motion of the rod to their right; all share the easing.
+            // Carried wheels turn in step with the pink pin of the wheel to their right; all share the easing.
             const positionsAt = progress => ids.map((_, index) => {
                 const digit = Number(valStr[index]);
                 const previousDigit = Number(previousStr[index]);
@@ -991,7 +882,7 @@
                 const distance = direction > 0
                     ? (digit - previousDigit + 10) % 10
                     : -((previousDigit - digit + 10) % 10);
-                return 10 + previousDigit + distance * mechanism.wheelProgress(progress, leadingIndex - index, Math.sign(distance));
+                return 10 + previousDigit + distance * mechanism.wheelProgress(progress);
             });
             const options = { duration: stepDuration, easing };
             const offsets = Array.from({ length: gearSamples + 1 }, (_, i) => i / gearSamples);

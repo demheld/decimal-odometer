@@ -6,20 +6,19 @@
 // The script takes `const gearDesign = {...};` and the code between "// gear mechanism start" and
 // "// gear mechanism end" from odometer.html, so it checks exactly the motion the page animates.
 //
-// Mechanism: every wheel has a blue ratchet wheel with 10 teeth and a pink cam on the 9. Between two
-// wheels a straight rod slides in two guides. During the step 9 -> 0 the cam of the right wheel pushes
-// the rod end, the rod tip pushes one tooth of the left wheel's ratchet wheel, a spring pushes the rod
-// back, and its tip clicks over the next tooth. Planes: ratchet wheels and rod bodies in front of the
-// dials, cams and the pins at the rod ends behind them.
+// Mechanism (Geneva star): every wheel has 10 spokes ending in round pins and a pink pin exactly
+// between 9 and 0. The star between two wheels is a disc with 4 radial slots. The pins of the left
+// wheel run through its slots (one digit = a quarter turn of the star); the pink pin of the right wheel
+// runs through a slot only during its step 9 -> 0 and so turns the left wheel by one digit.
+// Planes: spokes of wheel w and the pink pin of wheel w + 1 lie in the plane of star w (w % 2).
 //
 // Checks:
-//   1. One carry turns the left wheel by one digit (rest error "Nachrasten" <= design.check.maxSettle).
-//   2. The cam lets go of the rod and the rod is back at rest before the step ends.
-//   3. A cam touches a rod end only during its own step 9 -> 0 (never at rest, never a foreign rod).
-//   4. The rod tip pushes the steep face of a tooth (between root and tip), never over the tooth tip.
-//   5. The rod tip never cuts into a ratchet wheel (also when the left wheel turns on its own).
-//   6. The rod end pin stays outside every dial; the rod body stays clear of the windows and of the
-//      ratchet wheels of other wheels.
+//   1. During one step the star turns by exactly 90 degrees, and the pink pin (right side) needs the
+//      same star angle as the pin of the left wheel at every moment (both stay in their slots).
+//   2. No pin cuts into a star of its plane: during a carry, while the left wheel turns alone (with
+//      the right wheel resting on any digit) and while the right wheel turns alone through 0 ... 9.
+//   3. Pins in the same plane of neighbouring wheels never touch.
+//   4. Stars stay clear of the dials and of the reading windows.
 
 'use strict';
 
@@ -42,103 +41,115 @@ function segmentDistance(p, a, b) {
   return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy);
 }
 
+function inside(points, p) {
+  let result = false;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+    const a = points[i], b = points[j];
+    if ((a.y > p.y) !== (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x) result = !result;
+  }
+  return result;
+}
+
+const wrap = (angle) => ((angle % 360) + 540) % 360 - 180;
+
 function checkDesign(design, m) {
   const faults = [];
   const report = {};
   const note = (label, value) => { report[label] = Math.min(report[label] ?? Infinity, value); };
+  const size = design.pins.size;
   const last = design.wheels.length - 1;
-  const { rod, ratchet, dial } = design;
 
-  // 1. carry amount
-  const settle = Math.abs(m.carryEnd - 1) * 36;
-  if (settle > (design.check?.maxSettle ?? 1.5)) faults.push(`Übertrag dreht ${(m.carryEnd * 36).toFixed(2)}° statt 36°`);
+  // star outline in world coordinates for star s at angle sigma
+  const starPoints = (s, sigma) => m.outline.map((p) => {
+    const r = Math.hypot(p.x, p.y), a = Math.atan2(p.x, -p.y) * 180 / Math.PI;
+    return m.polar(m.starCenters[s], r, a + sigma);
+  });
+  // clearance between a pin (circle) and star s: negative = overlap
+  const pinGap = (pin, points) => {
+    let gap = Infinity;
+    for (let i = 0; i < points.length; i++) gap = Math.min(gap, segmentDistance(pin, points[i], points[(i + 1) % points.length]));
+    return inside(points, pin) ? -gap - size : gap - size;
+  };
+  // pins of wheel w in plane p at position `position`
+  const pinsOf = (w, position) => {
+    const rotation = m.wheelRotation(position);
+    const center = design.wheels[w];
+    return {
+      spokes: Array.from({ length: 10 }, (_, j) => m.polar(center, m.pinRadius, m.spokeAngle(j) + rotation)),
+      carry: m.polar(center, m.pinRadius, m.carryAngle + rotation),
+    };
+  };
+  // everything in the plane of star s against star s
+  const starGap = (s, positions) => {
+    const points = starPoints(s, m.starAngle(positions[s]));
+    const left = pinsOf(s, positions[s]).spokes;
+    const right = pinsOf(s + 1, positions[s + 1]).carry;
+    return Math.min(...left.map((p) => pinGap(p, points)), pinGap(right, points));
+  };
 
-  // 2. release and return
-  if (m.released === null) faults.push('Nocken lässt die Stange im Schritt 9 → 0 nicht los');
-  else if (m.released + rod.returnTime > 1) faults.push(`Stange ist am Schrittende noch nicht zurück (Nocken lässt bei ${m.released.toFixed(2)} los)`);
-  if (m.pushCurve[0] !== 0) faults.push('Nocken drückt schon bei 9 auf die Stange');
-
-  for (let gap = 0; gap < m.rods.length; gap++) {
-    const g = m.rods[gap];
-    // 3. the cam of every wheel against every rod end, over a full turn of that wheel
-    for (let w = 0; w <= last; w++) {
-      for (let k = 0; k < 3600; k++) {
-        const position = k / 360;               // digits
-        const touching = (() => {
-          if (w !== gap + 1) {
-            const wheel = design.wheels[w];
-            const [a, b] = [m.polar(wheel, design.cam.inner, design.cam.angle - 36 * position), m.polar(wheel, design.cam.radius - design.cam.width / 2, design.cam.angle - 36 * position)];
-            return segmentDistance(g.end, a, b) < rod.width / 2 + design.cam.width / 2;
-          }
-          return m.camPush(gap, -36 * position) > 0;
-        })();
-        const own = w === gap + 1 && position > 9 && position < 10;
-        if (touching && !own) {
-          faults.push(`Nocken von Rad ${w} berührt Stange ${gap} bei Stellung ${position.toFixed(2)}`);
-          break;
-        }
-      }
-    }
-    // 4./5. the rod during a carry (left wheel at digit 0 carried to 1) and while the left wheel turns alone
+  // 1. step angle and symmetry of the pink pin
+  if (Math.abs(m.stepAngle(1) - 90) > 0.01 && Math.abs(m.stepAngle(1) - 90 + 360) > 0.01) faults.push(`Stern dreht pro Schritt ${m.stepAngle(1).toFixed(2)}° statt 90°`);
+  for (let s = 0; s < m.starCenters.length; s++) {
+    let worst = 0;
     for (let i = 0; i <= 200; i++) {
-      const x = i / 200;
-      const leftPosition = m.wheelProgress(x, 1);
-      const pose = m.rodPose(gap, leftPosition, 9 + x);
-      const tip = m.tipAt(gap, pose.push, pose.tilt);
-      const radius = m.distance(g.left, tip);
-      if (pose.push > 0 && m.pushedProgress(gap, pose.push) >= leftPosition - 1e-6 && x < m.released) {
-        note('Stangenspitze unter Zahnspitze beim Schieben', ratchet.tip - radius);
-        if (radius > ratchet.tip - 0.5) faults.push(`Stangenspitze rutscht beim Schieben über die Zahnspitze (Radius ${radius.toFixed(1)})`);
-      }
-      checkClear(gap, pose, -36 * leftPosition, `Übertrag bei ${x.toFixed(2)}`);
+      const t = i / 200;
+      const pin = pinsOf(s + 1, 9 + t).carry;
+      const slot = m.direction(m.starCenters[s], pin) - 45;
+      worst = Math.max(worst, Math.abs(wrap(slot - m.stepAngle(t))));
     }
-    for (let i = 0; i <= 720; i++) {
-      const leftPosition = i / 72;
-      const pose = m.rodPose(gap, leftPosition, 0);
-      checkClear(gap, pose, -36 * leftPosition, `linkes Rad allein bei ${leftPosition.toFixed(2)}`);
+    note(`Rosa Stift ${s + 1} neben dem Schlitz (°)`, -worst);
+    if (worst > 0.05) faults.push(`Rosa Stift von Rad ${s + 1} läuft nicht im Schlitz von Stern ${s} (${worst.toFixed(2)}°)`);
+  }
+
+  // 2. pins against stars
+  for (let s = 0; s < m.starCenters.length; s++) {
+    const check = (label, positions) => {
+      const gap = starGap(s, positions);
+      note(`Stifte ↔ Stern ${s}`, gap);
+      if (gap < -0.05) faults.push(`${label}: Stift schneidet in Stern ${s} (${gap.toFixed(2)})`);
+    };
+    const base = design.wheels.map(() => 0);
+    for (let i = 0; i <= 200; i++) {
+      const t = i / 200;
+      const positions = base.slice();
+      positions[s] = t; positions[s + 1] = 9 + t;           // carry: left wheel in step with the right
+      check(`Übertrag bei ${t.toFixed(2)}`, positions);
+    }
+    for (let digit = 0; digit < 10; digit++) {
+      for (let i = 0; i <= 60; i++) {
+        const positions = base.slice();
+        positions[s] = i / 60; positions[s + 1] = digit;     // left wheel turns alone
+        check(`linkes Rad allein, rechtes Rad auf ${digit}`, positions);
+      }
+    }
+    for (let i = 0; i <= 900; i++) {
+      const positions = base.slice();
+      positions[s] = 3; positions[s + 1] = i / 100;         // right wheel turns alone 0 ... 9
+      check(`rechtes Rad allein bei ${(i / 100).toFixed(2)}`, positions);
     }
   }
 
-  function checkClear(gap, pose, leftRotation, where) {
-    const g = m.rods[gap];
-    const tip = m.tipAt(gap, pose.push, pose.tilt);
-    const end = (() => {
-      const shifted = m.add(g.end, g.axis, pose.push);
-      return m.polar(g.rightGuide, m.distance(g.rightGuide, shifted), m.direction(g.rightGuide, shifted) + pose.tilt);
-    })();
-    // tip vs ratchet outline (sampled across the rod width)
+  // 3. pins of neighbouring wheels in the same plane
+  for (let w = 0; w < last; w++) {
     let worst = Infinity;
-    for (let o = -rod.width / 2; o <= rod.width / 2 + 1e-9; o += rod.width / 8) {
-      const p = m.add(tip, g.axis, o);
-      const reach = Math.sqrt(Math.max(0, (rod.width / 2) ** 2 - o * o));
-      worst = Math.min(worst, m.distance(g.left, p) - reach - m.ratchetRadius(m.direction(g.left, p), leftRotation));
+    for (let a = 0; a < 10; a += 0.25) for (let b = 0; b < 10; b += 0.25) {
+      const left = pinsOf(w, a).spokes, right = pinsOf(w + 1, b).carry;
+      for (const p of left) worst = Math.min(worst, m.distance(p, right) - 2 * size);
     }
-    note('Stangenspitze ↔ Klinkenrad', worst);
-    if (worst < -0.3 && !(pose.push > 0)) faults.push(`Stangenspitze schneidet ins Klinkenrad (${where})`);
-    // rod end pin outside every dial
-    design.wheels.forEach((wheel, w) => {
-      const gapToDial = m.distance(end, wheel) - dial.radius - rod.width / 2;
-      note(`Stangenende ${gap} ↔ Zifferblatt ${w}`, gapToDial);
-      if (gapToDial < 0) faults.push(`Stangenende ${gap} liegt über dem Zifferblatt ${w} (${where})`);
-    });
-    // rod body vs windows and foreign ratchet wheels
-    design.wheels.forEach((wheel, w) => {
-      const { width, height, offset } = dial.window;
-      const corner = { x: wheel.x - width / 2, y: wheel.y - dial.digitRadius + offset - height / 2 };
-      const box = [corner, { x: corner.x + width, y: corner.y }, { x: corner.x + width, y: corner.y + height }, { x: corner.x, y: corner.y + height }];
-      const toBox = Math.min(...box.map((c) => segmentDistance(c, end, tip))) - rod.width / 2;
-      const inside = end.x > corner.x && end.x < corner.x + width && end.y > corner.y && end.y < corner.y + height;
-      note(`Stange ${gap} ↔ Fenster ${w}`, inside ? -1 : toBox);
-      if (inside || toBox < 1) faults.push(`Stange ${gap} verdeckt das Fenster von Rad ${w}`);
-      if (w !== gap) {
-        const toRatchet = segmentDistance(wheel, end, tip) - ratchet.tip - rod.width / 2;
-        note(`Stange ${gap} ↔ Klinkenrad ${w}`, toRatchet);
-        if (toRatchet < 0) faults.push(`Stange ${gap} berührt das Klinkenrad von Rad ${w} (${where})`);
-      }
-    });
+    note(`Stifte Rad ${w} ↔ rosa Stift Rad ${w + 1}`, worst);
+    if (worst < 0) faults.push(`Stifte von Rad ${w} berühren den rosa Stift von Rad ${w + 1}`);
   }
 
-  return { ok: faults.length === 0, faults: [...new Set(faults)], report, settle };
+  // 4. stars vs dials and windows
+  m.starCenters.forEach((center, s) => {
+    design.wheels.forEach((wheel, w) => {
+      const gap = m.distance(center, wheel) - design.dial.radius - m.starRadius;
+      note(`Stern ${s} ↔ Zifferblatt ${w}`, gap);
+      if (gap < 0) faults.push(`Stern ${s} liegt über dem Zifferblatt ${w}`);
+    });
+  });
+
+  return { ok: faults.length === 0, faults: [...new Set(faults)], report };
 }
 
 module.exports = { loadMechanism, checkDesign };
@@ -147,7 +158,7 @@ if (require.main === module) {
   const htmlPath = process.argv[2] || path.join(__dirname, '..', 'odometer.html');
   const { design, mechanism } = loadMechanism(htmlPath);
   const result = checkDesign(design, mechanism);
-  console.log(`Übertrag: ${(mechanism.carryEnd * 36).toFixed(2)}° (Nachrasten ${result.settle.toFixed(2)}°), Nocken lässt bei ${mechanism.released?.toFixed(2)} des Schritts los`);
+  console.log(`Stiftradius ${mechanism.pinRadius.toFixed(2)}, Stern ${mechanism.starRadius.toFixed(2)}, Schlitz bis ${mechanism.slotBottom.toFixed(2)}`);
   for (const fault of result.faults.slice(0, 12)) console.log(`✗ ${fault}`);
   console.log('Kleinste Abstände:');
   for (const [label, gap] of Object.entries(result.report).sort((a, b) => a[1] - b[1]).slice(0, 8)) {

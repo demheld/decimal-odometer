@@ -14,9 +14,12 @@ und 1000.
   Schritte und setzt den Wert auf 0.
   Die Rechentasten bleiben während des Zählens bedienbar.
   In Hintergrund-Tabs kann der Browser die Zeitabstände verlängern.
-- Die Rechentasten addieren (blau) oder subtrahieren (rosa) den jeweiligen
-  Stellenwert. Die blaue und die rosa Taste eines Stellenwerts sind gleich
-  breit, sodass beide Reihen übereinander ausgerichtet sind.
+- Die Rechentasten stehen direkt unter dem jeweiligen Zahlenrad, in derselben
+  Reihenfolge wie die Räder: +1000, +100, +10, +1. In jeder Spalte addiert die
+  blaue Taste oben den Stellenwert, die rosa Taste darunter subtrahiert ihn.
+  Die Tasten sind so schmal wie ein Rad und hoch; ihre Beschriftung ist um 90°
+  gedreht (von unten nach oben zu lesen), damit auch „+1000“ auf schmalen
+  Bildschirmen passt.
 - Schnelle Klicks gehen nicht verloren und überspringen keine Animation:
   Sie werden gesammelt und nacheinander ausgeführt, höchstens ein Schritt
   pro Drehung der Zahlenräder (420 ms).
